@@ -21,13 +21,13 @@
 	},
 	"Hooks": {
 		"GetPreferences": [
-			"MediaWiki\\Extension\\Mobyome\\Hooks::onGetPreferences"
+			"MediaWiki\\Extension\\OpenProject\\Hooks::onGetPreferences"
 		],
 		"ParserFirstCallInit": [
-			"MediaWiki\\Extension\\Mobyome\\Hooks::onParserFirstCallInit"
+			"MediaWiki\\Extension\\OpenProject\\Hooks::onParserFirstCallInit"
 		],
 		"BeforePageDisplay": [
-			"MediaWiki\\Extension\\Mobyome\\Hooks::onBeforePageDisplay"
+			"MediaWiki\\Extension\\OpenProject\\Hooks::onBeforePageDisplay"
 		]
 	},
 	"MessagesDirs": {

@@ -22,16 +22,16 @@ class Hooks {
 	}
 
 
-	static function onParserFirstCallInit( Parser &$parser ) {
-		$parser->setFunctionHook( 'opversion', 'OpenProjectHooks::Version' );
-		$parser->setFunctionHook( 'opproject', 'OpenProjectHooks::Project' );
-		$parser->setFunctionHook( 'opprojectinfo', 'OpenProjectHooks::Projectinfo' );
-		$parser->setFunctionHook( 'opversionprojects', 'OpenProjectHooks::VersionProjects' );
-		$parser->setFunctionHook( 'opwp', 'OpenProjectHooks::WorkPackage' );
-		$parser->setFunctionHook( 'optasks', 'OpenProjectHooks::Tasks' );
-		$parser->setFunctionHook( 'opmytasks', 'OpenProjectHooks::MyTasks' );
-		$parser->setFunctionHook( 'op-backlog', 'OpenProjectHooks::renderBacklog' );
-		$parser->setFunctionHook( 'op-storypoints', 'OpenProjectHooks::StoryPoints' );
+	static function onParserFirstCallInit( \Parser &$parser ) {
+		$parser->setFunctionHook( 'opversion', [ self::class, 'Version' ] );
+		$parser->setFunctionHook( 'opproject', [ self::class, 'Project' ] );
+		$parser->setFunctionHook( 'opprojectinfo', [ self::class, 'Projectinfo' ] );
+		$parser->setFunctionHook( 'opversionprojects', [ self::class, 'VersionProjects' ] );
+		$parser->setFunctionHook( 'opwp', [ self::class, 'WorkPackage' ] );
+		$parser->setFunctionHook( 'optasks', [ self::class, 'Tasks' ] );
+		$parser->setFunctionHook( 'opmytasks', [ self::class, 'MyTasks' ] );
+		$parser->setFunctionHook( 'op-backlog', [ self::class, 'renderBacklog' ] );
+		$parser->setFunctionHook( 'op-storypoints', [ self::class, 'StoryPoints' ] );
 		return true;
 	}
 
@@ -39,7 +39,7 @@ class Hooks {
 	/**
 	 * Load resources
 	 */
-	static function onBeforePageDisplay( OutputPage &$out, Skin &$skin ) {
+	static function onBeforePageDisplay( \OutputPage &$out, \Skin &$skin ) {
 		$out->addModules( [ 'ext.openproject' ] );
 	}
 
@@ -62,7 +62,7 @@ class Hooks {
 	 * @param String $version Backlog version
 	 * @param String $name Name of the Backlog version
 	 */
-	static function renderBacklog( Parser &$parser ) {
+	static function renderBacklog( \Parser &$parser ) {
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		if( !isset( $options['version'] ) ) {
 			if( !isset( $options['name'] ) ) {
@@ -132,7 +132,7 @@ class Hooks {
 	 * TODO: cache http responses in static variables
 	 * TODO: error handling (wrong parameters, non-existing property, link)
 	 */
-	static function Projectinfo( Parser $parser, $project = '', $property = '' ) {
+	static function Projectinfo( \Parser $parser, $project = '', $property = '' ) {
 		$parser->disableCache();
 		if( $project == '' || $property == '' ) {
 			return '<div class="op-warning">Parameter missing.</div>';
@@ -165,7 +165,7 @@ class Hooks {
 	 * 
 	 * @param string $version ID of the version
 	 */
-	static function VersionProjects( Parser $parser, $version = '', $format = 'list', $template = '' ) {
+	static function VersionProjects( \Parser $parser, $version = '', $format = 'list', $template = '' ) {
 		$parser->disableCache();
 		if( $version == '' ) {
 			return '<div class="op-warning">Parameter missing.</div>';
@@ -201,7 +201,7 @@ class Hooks {
 	 * @param string $project ID of the project (version filter doesn't work without it)
 	 * @param string $version ID of the version
 	 */
-	static function Version( Parser $parser, $project = '', $version = '' ) {
+	static function Version( \Parser $parser, $project = '', $version = '' ) {
 		$parser->disableCache();
 		if( $project == '' || $version == '' ) {
 			return '<div class="op-warning">Parameter missing.</div>';
@@ -362,7 +362,7 @@ class Hooks {
 	/**
 	 * Show all open work packages for a project
 	 */
-	static function Tasks( Parser &$parser ) {
+	static function Tasks( \Parser &$parser ) {
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		$list = self::getVersionsWithWorkPackages( $options );
 		return array( $list, 'noparse' => true, 'isHTML' => true );
@@ -372,7 +372,7 @@ class Hooks {
 	/**
 	 * Show all my open work packages
 	 */
-	static function MyTasks( Parser &$parser ) {
+	static function MyTasks( \Parser &$parser ) {
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		if( !isset( $options['assignee'] ) ) {
 			$options['assignee'] = 'me';
@@ -426,8 +426,8 @@ class Hooks {
 		$list = '';
 		if( is_array( $versions ) ) {
 			foreach( $versions as $version ) {
-				$start_date = !is_null( $version['version']->startDate ) ? new DateTime( $version['version']->startDate ) : null;
-				$end_date = !is_null( $version['version']->endDate ) ? new DateTime( $version['version']->endDate ) : null;
+				$start_date = !is_null( $version['version']->startDate ) ? new \DateTime( $version['version']->startDate ) : null;
+				$end_date = !is_null( $version['version']->endDate ) ? new \DateTime( $version['version']->endDate ) : null;
 				if( is_null( $start_date ) ) {
 					$interval = is_null( $end_date ) ? '' : '(until ' . $end_date->format('j.n.') . ')';
 				} else {
@@ -447,7 +447,7 @@ class Hooks {
 	 * 
 	 * @param string $project ID of the project
 	 */
-	static function Project( Parser $parser, $project = '' ) {
+	static function Project( \Parser $parser, $project = '' ) {
 		$parser->disableCache();
 		if( $project == '' ) {
 			return '<div class="op-warning">No parameter has been set.</div>';
@@ -474,7 +474,7 @@ class Hooks {
 	/**
 	 * Return Story Points for a project and version
 	 */
-	static function StoryPoints( Parser $parser ) {
+	static function StoryPoints( \Parser $parser ) {
 		$parser->disableCache();
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 
@@ -514,7 +514,7 @@ class Hooks {
 	 * 
 	 * @param string $wp ID of the work package
 	 */
-	static function WorkPackage( Parser $parser, $wp = '' ) {
+	static function WorkPackage( \Parser $parser, $wp = '' ) {
 		$parser->disableCache();
 		if( $wp == '' ) {
 			return '<div class="op-warning">No parameter has been set.</div>';
@@ -627,7 +627,7 @@ class Hooks {
 
 			foreach( $cluster as $id => &$project ) {
 				$cluster_heading = '<a href="' . $project['href'] . '">' . $project['title'] . '</a>' . ( isset( $options['story_points'] ) && $options['story_points'] ? ' <small>(' . $project['storyPoints'] . ')</small>' : '' );
-				$cluster_heading_template = Title::newFromText( 'Template:op-cluster-heading' );
+				$cluster_heading_template = \Title::newFromText( 'Template:op-cluster-heading' );
 				if( $cluster_heading_template->exists() ) {
 					$cluster_heading = $GLOBALS['wgParser']->recursiveTagParse( '{{op-cluster-heading
 						|href=' . $project['href'] . '
@@ -740,9 +740,9 @@ class Hooks {
 			$package->closed = $package->status_id === '10';
 
 			$package->hours = [
-				'estimated' => is_null( $package->estimatedTime ) ? 0 : (new DateInterval($package->estimatedTime))->format('%h'),
-				'derivedEstimated' => is_null( $package->derivedEstimatedTime ) ? 0 : (new DateInterval($package->derivedEstimatedTime))->format('%h'),
-				'remaining' => is_null( $package->remainingTime ) ? 0 : (new DateInterval($package->remainingTime))->format('%h')
+				'estimated' => is_null( $package->estimatedTime ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h'),
+				'derivedEstimated' => is_null( $package->derivedEstimatedTime ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h'),
+				'remaining' => is_null( $package->remainingTime ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h')
 			];
 		}
 		return $work_packages;
@@ -781,9 +781,9 @@ class Hooks {
 					'work_packages' => []
 				];
 			}
-			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['estimated'] += is_null( $package->estimatedTime ) ? 0 : (new DateInterval($package->estimatedTime))->format('%h');
-			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['derivedEstimated'] += is_null( $package->derivedEstimatedTime ) ? 0 : (new DateInterval($package->derivedEstimatedTime))->format('%h');
-			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['remaining'] += is_null( $package->remainingTime ) ? 0 : (new DateInterval($package->remainingTime))->format('%h');
+			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['estimated'] += is_null( $package->estimatedTime ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h');
+			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['derivedEstimated'] += is_null( $package->derivedEstimatedTime ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h');
+			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['remaining'] += is_null( $package->remainingTime ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h');
 			$cluster[$package->project_id]['storyPoints'] += $package->storyPoints ?? 0;
 			$cluster[$package->project_id]['work_packages'][] = $package;
 		}
