@@ -1,0 +1,53 @@
+{
+	"name": "OpenProject",
+	"version": "0.0.1",
+	"author": [
+		"Tobias Haider"
+	],
+	"url": "https://www.mediawiki.org/wiki/Extension:OpenProject",
+	"descriptionmsg": "openproject-desc",
+	"license-name": "GPL",
+	"type": "other",
+	"AutoloadClasses": {
+		"MediaWiki\\Extension\\OpenProject\\Hooks": "src/Hooks.php"
+	},
+	"config": {
+		"OpenProjectURL": false,
+		"OpenProjectAPIKey": false,
+		"OpenProjectProjectID": false
+	},
+	"ExtensionMessagesFiles": {
+		"OpenProjectMagic": "OpenProject.i18n.magic.php"
+	},
+	"Hooks": {
+		"GetPreferences": [
+			"MediaWiki\\Extension\\Mobyome\\Hooks::onGetPreferences"
+		],
+		"ParserFirstCallInit": [
+			"MediaWiki\\Extension\\Mobyome\\Hooks::onParserFirstCallInit"
+		],
+		"BeforePageDisplay": [
+			"MediaWiki\\Extension\\Mobyome\\Hooks::onBeforePageDisplay"
+		]
+	},
+	"MessagesDirs": {
+		"OpenProject": [
+			"i18n"
+		]
+	},
+	"ResourceModules": {
+		"ext.openproject": {
+			"scripts": [
+				"modules/ext.openproject.js"
+			],
+			"styles": [
+				"modules/ext.openproject.css"
+			]
+		}
+	},
+	"ResourceFileModulePaths": {
+		"localBasePath": "",
+		"remoteExtPath": "OpenProject"
+	},
+	"manifest_version": 1
+}

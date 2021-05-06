@@ -1,0 +1,11 @@
+{
+	"openproject-desc": "Extension, die eine Integration für OpenProject bereitstellt",
+	"openproject-apikey": "API-Token",
+	"prefs-openproject": "OpenProject",
+	"openproject-apikey-help": "Du kannst ein API-Zugangstoken in den Kontoeinstellungen in OpenProject generieren.",
+	"openproject-estimated": "geschätzt",
+	"openproject-remaining": "verbleibend",
+	"openproject-completed": "abgeschlossen",
+	"openproject-overview-storypoints": "$1 Story Points insgesamt"
+
+}
