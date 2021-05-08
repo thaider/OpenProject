@@ -133,7 +133,7 @@ class Hooks {
 	 * TODO: error handling (wrong parameters, non-existing property, link)
 	 */
 	static function Projectinfo( \Parser $parser, $project = '', $property = '' ) {
-		$parser->disableCache();
+		$parser->getOutput()->updateCacheExpiry(0);
 		if( $project == '' || $property == '' ) {
 			return '<div class="op-warning">Parameter missing.</div>';
 		}
@@ -166,7 +166,7 @@ class Hooks {
 	 * @param string $version ID of the version
 	 */
 	static function VersionProjects( \Parser $parser, $version = '', $format = 'list', $template = '' ) {
-		$parser->disableCache();
+		$parser->getOutput()->updateCacheExpiry(0);
 		if( $version == '' ) {
 			return '<div class="op-warning">Parameter missing.</div>';
 		}
@@ -202,7 +202,7 @@ class Hooks {
 	 * @param string $version ID of the version
 	 */
 	static function Version( \Parser $parser, $project = '', $version = '' ) {
-		$parser->disableCache();
+		$parser->getOutput()->updateCacheExpiry(0);
 		if( $project == '' || $version == '' ) {
 			return '<div class="op-warning">Parameter missing.</div>';
 		}
@@ -448,7 +448,7 @@ class Hooks {
 	 * @param string $project ID of the project
 	 */
 	static function Project( \Parser $parser, $project = '' ) {
-		$parser->disableCache();
+		$parser->getOutput()->updateCacheExpiry(0);
 		if( $project == '' ) {
 			return '<div class="op-warning">No parameter has been set.</div>';
 		}
@@ -475,7 +475,7 @@ class Hooks {
 	 * Return Story Points for a project and version
 	 */
 	static function StoryPoints( \Parser $parser ) {
-		$parser->disableCache();
+		$parser->getOutput()->updateCacheExpiry(0);
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 
 		if( !isset( $options['version'] ) ) {
@@ -515,7 +515,7 @@ class Hooks {
 	 * @param string $wp ID of the work package
 	 */
 	static function WorkPackage( \Parser $parser, $wp = '' ) {
-		$parser->disableCache();
+		$parser->getOutput()->updateCacheExpiry(0);
 		if( $wp == '' ) {
 			return '<div class="op-warning">No parameter has been set.</div>';
 		}
