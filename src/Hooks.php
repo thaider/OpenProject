@@ -434,11 +434,11 @@ class Hooks {
 					$interval = is_null( $end_date ) ? ( '(from ' . $start_date->format('j.n.') . ')' ) : ( '(' . $start_date->format('j.n.') . '-' . $end_date->format('j.n.') . ')' );
 				}
 				$href = $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version['version']->id;
-				$list .= '<tr><th colspan="2"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small></th></tr>';
+				$list .= '<tr><th colspan="2" class="border-right"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small></th><th class="semorg-showedit"></th></tr>';
 				$list .= self::WorkPackageList( $version['work_packages'], $options );
 			}
 		}
-		$list = '<table class="table table-bordered table-sm">' . $list . '</table>';
+		$list = '<div class="semorg-list"><div class="semorg-list-table"><table class="table table-bordered table-sm">' . $list . '</table></div></div>';
 		return $list;
 	}
 
@@ -637,7 +637,7 @@ class Hooks {
 						|id=' . $id . '
 					}}' );
 				}
-				$list .= '<tr><td>' . $cluster_heading . '</td>';
+				$list .= '<tr><td style="font-size:small">' . $cluster_heading . '</td>';
 
 				$work_package_list = '';
 				foreach( $project['work_packages'] as $package ) {
@@ -650,7 +650,7 @@ class Hooks {
 					}
 				}
 
-				$list .= '<td style="font-size:small"><ul class="op-wp-list">' . $work_package_list . '</ul></td></tr>';
+				$list .= '<td style="font-size:small" class="border-right"><ul class="op-wp-list">' . $work_package_list . '</ul></td><td class="semorg-showedit"></td></tr>';
 			}
 		} else {
 			foreach( $work_packages as $package ) {
