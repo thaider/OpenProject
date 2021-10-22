@@ -417,7 +417,7 @@ class Hooks {
 	 * @param array $options Options
 	 */
 	static function getVersionsWithWorkPackages( $options ) {
-		$options['overview'] = true;
+		//$options['overview'] = true;
 		$options['cluster'] = true;
 		$project = self::getProjectID( $options['project'] ?? null );
 		$date = isset( $options['date'] ) ? strtotime( $options['date'] ) : null;
@@ -434,10 +434,11 @@ class Hooks {
 					$interval = is_null( $end_date ) ? ( '(from ' . $start_date->format('j.n.') . ')' ) : ( '(' . $start_date->format('j.n.') . '-' . $end_date->format('j.n.') . ')' );
 				}
 				$href = $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version['version']->id;
-				$list .= '<h4><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small></h4>';
+				$list .= '<tr><th colspan="2"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small></th></tr>';
 				$list .= self::WorkPackageList( $version['work_packages'], $options );
 			}
 		}
+		$list = '<table class="table table-bordered table-sm">' . $list . '</table>';
 		return $list;
 	}
 
@@ -636,7 +637,7 @@ class Hooks {
 						|id=' . $id . '
 					}}' );
 				}
-				$list .= '<div class="h5 op-cluster-project">' . $cluster_heading . '</div>';
+				$list .= '<tr><td>' . $cluster_heading . '</td>';
 
 				$work_package_list = '';
 				foreach( $project['work_packages'] as $package ) {
@@ -649,7 +650,7 @@ class Hooks {
 					}
 				}
 
-				$list .= '<ul class="op-wp-list">' . $work_package_list . '</ul>';
+				$list .= '<td style="font-size:small"><ul class="op-wp-list">' . $work_package_list . '</ul></td></tr>';
 			}
 		} else {
 			foreach( $work_packages as $package ) {
