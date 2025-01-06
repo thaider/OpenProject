@@ -55,7 +55,7 @@ class Hooks {
 		$error_html = '<span class="op-error">' . $error_msg . $error_function . '</span>';
 		return array( $error_html );
 	}
- 
+
 
 	/**
 	 * Show Backlog
@@ -145,7 +145,7 @@ class Hooks {
 		if( $code != '200' ) {
 			return '<div class="op-error">Abfrage fehlgeschlagen (Fehlercode: ' . $code . ')</div>';
 		}
-		
+
 		$property_value = $response->$property;
 		if( $property == 'description' ) {
 			$property_value = $property_value->html;
@@ -339,6 +339,9 @@ class Hooks {
 			$date = time();
 		}
 		$versions = self::getVersions( $params, $project );
+		usort( $versions, function($a, $b) {
+			return $a->startDate <=> $b->startDate;
+		});
 		$work_packages = [];
 		foreach( $versions as $version ) {
 			if( 
@@ -360,30 +363,33 @@ class Hooks {
 	}
 
 	/*
-     * Get the link for the current active version
-     *
-     * @param $project Specific project
-     * @param Array $params Parameters
-     *
-     * @return String Link to the active version
-     */
-    static function getCurrentVersionLink( \Parser &$parser, $project = null, $params = [] ) {
-        $date = time();
-        $future = 7;
-        $versions = self::getVersions( $params, $project );
-        foreach( $versions as $version ) {
-            if( 
-                !is_null( $version->startDate ) &&
-                $version->status == 'open' &&
-                strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
-                strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
-                ( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
-            ) {
-                return $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version->id . '/';
-            }
-        }
-        return self::renderError( 'No active version found', 'active_version' );
-    }
+	 * Get the link for the current active version
+	 *
+	 * @param $project Specific project
+	 * @param Array $params Parameters
+	 *
+	 * @return String Link to the active version
+	 */
+	static function getCurrentVersionLink( \Parser &$parser, $project = null, $params = [] ) {
+		$date = time();
+		$future = 7;
+		$versions = self::getVersions( $params, $project );
+		usort( $versions, function($a, $b) {
+			return $a->startDate <=> $b->startDate;
+		});
+		foreach( $versions as $version ) {
+			if( 
+				!is_null( $version->startDate ) &&
+				$version->status == 'open' &&
+				strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
+				strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
+				( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
+			) {
+				return $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version->id . '/';
+			}
+		}
+		return self::renderError( 'No active version found', 'active_version' );
+	}
 
 
 	/**
@@ -662,14 +668,14 @@ class Hooks {
 						|title=' . $project['title'] . '
 						|story_points=' . $project['storyPoints'] . '
 						|id=' . $id . '
-					}}' );
+				}}' );
 				}
 				$list .= '<tr><td style="font-size:small">' . $cluster_heading . '</td>';
 
 				$work_package_list = '';
 				foreach( $project['work_packages'] as $package ) {
 					$link = self::WorkPackageListItem( $package, $options );
-					
+
 					if( $package->closed ) {
 						$work_package_list .= $link;
 					} else {
