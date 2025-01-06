@@ -24,6 +24,7 @@ class Hooks {
 
 	static function onParserFirstCallInit( \Parser &$parser ) {
 		$parser->setFunctionHook( 'opversion', [ self::class, 'Version' ] );
+		$parser->setFunctionHook( 'opcurrentversionlink', [ self::class, 'getCurrentVersionLink' ] );
 		$parser->setFunctionHook( 'opproject', [ self::class, 'Project' ] );
 		$parser->setFunctionHook( 'opprojectinfo', [ self::class, 'Projectinfo' ] );
 		$parser->setFunctionHook( 'opversionprojects', [ self::class, 'VersionProjects' ] );
@@ -357,6 +358,32 @@ class Hooks {
 		}
 		return $work_packages;
 	}
+
+	/*
+     * Get the link for the current active version
+     *
+     * @param $project Specific project
+     * @param Array $params Parameters
+     *
+     * @return String Link to the active version
+     */
+    static function getCurrentVersionLink( $project = null, $params = [] ) {
+        $date = time();
+        $future = 7;
+        $versions = self::getVersions( $params, $project );
+        foreach( $versions as $version ) {
+            if( 
+                !is_null( $version->startDate ) &&
+                $version->status == 'open' &&
+                strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
+                strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
+                ( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
+            ) {
+                return $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version->id . '/';
+            }
+        }
+        return self::renderError( 'No active version found', 'active_version' );
+    }
 
 
 	/**
