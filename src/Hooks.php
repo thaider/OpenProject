@@ -370,7 +370,8 @@ class Hooks {
 	 *
 	 * @return String Link to the active version
 	 */
-	static function getCurrentVersionLink( \Parser &$parser, $project = null, $params = [] ) {
+	static function getCurrentVersionLink( \Parser &$parser, $project = null ) {
+		$params = self::extractOptions( array_slice(func_get_args(), 2) );
 		$date = time();
 		$future = 7;
 		$versions = self::getVersions( $params, $project );
