@@ -675,6 +675,10 @@ class Hooks {
 
 				$work_package_list = '';
 				foreach( $project['work_packages'] as $package ) {
+					// exclude work packages with children
+					if( isset( $package->_links->children ) ) {
+				 		continue;		
+					}
 					$link = self::WorkPackageListItem( $package, $options );
 
 					if( $package->closed ) {
