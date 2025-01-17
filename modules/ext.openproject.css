@@ -1,3 +1,12 @@
 .op-error {
 	color:red;
 }
+.op-wp-closed {
+	text-decoration: line-through black;
+}
+.op-wp-close:hover {
+	cursor:pointer;
+}
+.op-wp-close {
+	color:var(--primary);
+}

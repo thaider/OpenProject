@@ -6,6 +6,6 @@
 	"openproject-estimated": "geschätzt",
 	"openproject-remaining": "verbleibend",
 	"openproject-completed": "abgeschlossen",
-	"openproject-overview-storypoints": "$1 Story Points insgesamt"
-
+	"openproject-overview-storypoints": "$1 Story Points insgesamt",
+	"openproject-close-workpackage": "Arbeitspaket schließen"
 }

@@ -45,6 +45,12 @@ class Hooks {
 	}
 
 
+	static function onResourceLoaderGetConfigVars( array &$vars, string $skin, \Config $config ) {
+		$vars['wgOpenProjectURL'] = $config->get( 'OpenProjectURL' );
+		return true;
+	}
+
+
 	/**
 	 * Show Error
 	 *
@@ -852,16 +858,15 @@ class Hooks {
 			$link .= ' <small class="op-wp-storypoints">(' . $package->storyPoints . ')</small> ';
 		}
 
-		if( $package->closed ) {
-			$link = '<s class="op-wp-closed">' . $link . '</s>';
-		}
-
 	/*	if( $package->description->raw != '' ) {
 			$link .= '<div class="op-wp-desc">' . $package->description->raw . '</div>';
 		}
 	 */	
+		if( !$package->closed ) {
+			$link .= ' <i class="fa fa-check op-wp-close" data-toggle="tooltip" data-id="' . $package->id . '" data-lock="' . $package->lockVersion . '" title="' . wfMessage('openproject-close-workpackage')->text() . '"></i>';
+		}
 
-		$link = '<li class="op-wp-listitem op-wp-status-' . $package->status_id . '">' . $link . '</li>';
+		$link = '<li class="op-wp-listitem op-wp-status-' . $package->status_id . ( $package->closed ? ' op-wp-closed' : '' ) . '">' . $link . '</li>';
 		return $link;
 	}
 

@@ -13,7 +13,6 @@
 	},
 	"config": {
 		"OpenProjectURL": false,
-		"OpenProjectAPIKey": false,
 		"OpenProjectProjectID": false
 	},
 	"ExtensionMessagesFiles": {
@@ -28,6 +27,9 @@
 		],
 		"BeforePageDisplay": [
 			"MediaWiki\\Extension\\OpenProject\\Hooks::onBeforePageDisplay"
+		],
+		"ResourceLoaderGetConfigVars": [
+			"MediaWiki\\Extension\\OpenProject\\Hooks::onResourceLoaderGetConfigVars"
 		]
 	},
 	"MessagesDirs": {
@@ -42,6 +44,8 @@
 			],
 			"styles": [
 				"modules/ext.openproject.css"
+			],
+			"messages": [
 			]
 		}
 	},
