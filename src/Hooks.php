@@ -417,6 +417,7 @@ class Hooks {
 		if( !isset( $options['assignee'] ) ) {
 			$options['assignee'] = 'me';
 		}
+		$options['hours'] = true;
 		$list = self::getVersionsWithWorkPackages( $options );
 		return array( $list, 'noparse' => true, 'isHTML' => true );
 	}
@@ -474,7 +475,11 @@ class Hooks {
 					$interval = is_null( $end_date ) ? ( '(from ' . $start_date->format('j.n.') . ')' ) : ( '(' . $start_date->format('j.n.') . '-' . $end_date->format('j.n.') . ')' );
 				}
 				$href = $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version['version']->id;
-				$list .= '<tr><th colspan="2" class="border-right"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small></th><th class="semorg-showedit"></th></tr>';
+				$list .= '<tr><th colspan="2" class="border-right"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small>';
+				$version['work_packages'] = self::enrichWorkPackages( $version['work_packages'] );
+				$sums = self::summarizeWorkPackages( $version['work_packages'] );
+				$list .= ' - <span style="text-transform:none">' . $sums['hours']['nochildren'] . 'h verbleibend</span>';
+				$list .= '</th><th class="semorg-showedit"></th></tr>';
 				$list .= self::WorkPackageList( $version['work_packages'], $options );
 			}
 		}
@@ -667,6 +672,7 @@ class Hooks {
 			$cluster = self::clusterWorkPackagesByProject( $work_packages );
 
 			foreach( $cluster as $id => &$project ) {
+				$cluster_hours = self::summarizeWorkPackages( $project['work_packages'] );
 				$cluster_heading = '<a href="' . $project['href'] . '">' . $project['title'] . '</a>' . ( isset( $options['story_points'] ) && $options['story_points'] ? ' <small>(' . $project['storyPoints'] . ')</small>' : '' );
 				$cluster_heading_template = \Title::newFromText( 'Template:op-cluster-heading' );
 				if( $cluster_heading_template->exists() ) {
@@ -720,7 +726,6 @@ class Hooks {
 	}
 
 
-
 	/**
 	 * Get totals for hours, story points etc. for work packages
 	 *
@@ -728,7 +733,7 @@ class Hooks {
 	 *
 	 * @return Array Sums
 	 */
-	static function summarizeWorkPackages( $work_packages ) {
+	static function summarizeWorkPackages( $work_packages,  ) {
 		$hours = [
 			'open' => [
 				'remaining' => 0,
@@ -742,6 +747,7 @@ class Hooks {
 				'remaining' => 0,
 				'estimated' => 0
 			],
+			'nochildren' => 0
 		];
 
 		$storyPoints = 0;
@@ -752,6 +758,14 @@ class Hooks {
 				$hours[$status]['estimated'] += $package->hours['estimated'];
 			}
 
+			if( !isset( $package->_links->children ) && !$package->closed ) {
+				if( $package->hours['estimated'] > 0 ) {
+					$hours['nochildren'] += $package->hours['remaining'];
+				} else {
+					$hours['nochildren'] += $package->storyPoints ?? 0;
+				}
+			}
+
 			$storyPoints += $package->storyPoints ?? 0;
 		}
 
@@ -760,7 +774,6 @@ class Hooks {
 			'storyPoints' => $storyPoints
 		];
 	}
-
 
 
 	/**
@@ -857,12 +870,16 @@ class Hooks {
 		if( isset( $options['story_points'] ) && $options['story_points'] ) {
 			$link .= ' <small class="op-wp-storypoints">(' . $package->storyPoints . ')</small> ';
 		}
+		if( isset( $options['hours'] ) && !$package->closed ) {
+			$hours = ( $package->hours['estimated'] > 0 ) ? $package->hours['remaining'] : ( $package->storyPoints ?? 0 );
+			$link .= ' <small class="op-wp-hours">(' . $hours . ')</small> ';
+		}
 
 	/*	if( $package->description->raw != '' ) {
 			$link .= '<div class="op-wp-desc">' . $package->description->raw . '</div>';
 		}
 	 */	
-		if( !$package->closed ) {
+		if( isset( $options['closable'] ) && !$package->closed ) {
 			$link .= ' <i class="fa fa-check op-wp-close" data-toggle="tooltip" data-id="' . $package->id . '" data-lock="' . $package->lockVersion . '" title="' . wfMessage('openproject-close-workpackage')->text() . '"></i>';
 		}
 
