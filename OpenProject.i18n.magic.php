@@ -16,6 +16,7 @@ $magicWords = array();
 $magicWords['en'] = array(
 	'opversion' => array( 0, 'opversion' ),
 	'opcurrentversionlink' => array( 0, 'opcurrentversionlink' ),
+	'opcurrentversionhours' => array( 0, 'opcurrentversionhours' ),
 	'opproject' => array( 0, 'opproject' ),
 	'opprojectinfo' => array( 0, 'opprojectinfo' ),
 	'opversionprojects' => array( 0, 'opversionprojects' ),

@@ -25,6 +25,7 @@ class Hooks {
 	static function onParserFirstCallInit( \Parser &$parser ) {
 		$parser->setFunctionHook( 'opversion', [ self::class, 'Version' ] );
 		$parser->setFunctionHook( 'opcurrentversionlink', [ self::class, 'getCurrentVersionLink' ] );
+		$parser->setFunctionHook( 'opcurrentversionhours', [ self::class, 'getCurrentVersionHours' ] );
 		$parser->setFunctionHook( 'opproject', [ self::class, 'Project' ] );
 		$parser->setFunctionHook( 'opprojectinfo', [ self::class, 'Projectinfo' ] );
 		$parser->setFunctionHook( 'opversionprojects', [ self::class, 'VersionProjects' ] );
@@ -336,6 +337,8 @@ class Hooks {
 	 * Get all versions and their work packages for a specific date
 	 *
 	 * @param DateTime $date Date to be looked at
+	 * @param $project Specific project
+	 * @param Array $params Parameters
 	 *
 	 * @return Array Versions and their work packages
 	 */
@@ -372,7 +375,6 @@ class Hooks {
 	 * Get the link for the current active version
 	 *
 	 * @param $project Specific project
-	 * @param Array $params Parameters
 	 *
 	 * @return String Link to the active version
 	 */
@@ -393,6 +395,41 @@ class Hooks {
 				( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
 			) {
 				return $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version->id . '/';
+			}
+		}
+		return self::renderError( 'No active version found', 'active_version' );
+	}
+
+
+	/*
+	 * Get the hours planned for the current active version
+	 *
+	 * @param $project Specific project
+	 *
+	 * @return Float Planned hours
+	 */
+	static function getCurrentVersionHours( \Parser &$parser, $project = null ) {
+		$params = self::extractOptions( array_slice(func_get_args(), 2) );
+		$date = time();
+		$future = 7;
+		$versions = self::getVersions( $params, $project );
+		usort( $versions, function($a, $b) {
+			return $a->startDate <=> $b->startDate;
+		});
+		foreach( $versions as $version ) {
+			if( 
+				!is_null( $version->startDate ) &&
+				$version->status == 'open' &&
+				strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
+				strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
+				( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
+			) {
+				$project_href = $version->_links->definingProject->href;
+				$project = substr( $project_href, strrpos($project_href, '/')+1);
+				$work_packages = self::getWorkPackages( array_merge( $params, [ 'project' => $project, 'version' => $version->id ] ) );
+				self::enrichWorkPackages( $work_packages );
+				$sums = self::summarizeWorkPackages( $work_packages );
+				return $sums['hours']['nochildren'];
 			}
 		}
 		return self::renderError( 'No active version found', 'active_version' );
@@ -747,7 +784,7 @@ class Hooks {
 				'remaining' => 0,
 				'estimated' => 0
 			],
-			'nochildren' => 0
+			'nochildren' => 0 // remaining hours plus story points (if a feature has no children defined)
 		];
 
 		$storyPoints = 0;
@@ -798,9 +835,9 @@ class Hooks {
 			$package->closed = $package->status_id === '10';
 
 			$package->hours = [
-				'estimated' => is_null( $package->estimatedTime ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h'),
-				'derivedEstimated' => is_null( $package->derivedEstimatedTime ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h'),
-				'remaining' => is_null( $package->remainingTime ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h')
+				'estimated' => is_null( $package->estimatedTime ) ? 0 : ((new \DateInterval($package->estimatedTime))->format('%h') + (new \DateInterval($package->estimatedTime))->format('%i')/60),
+				'derivedEstimated' => is_null( $package->derivedEstimatedTime ) ? 0 : ((new \DateInterval($package->derivedEstimatedTime))->format('%h') + (new \DateInterval($package->derivedEstimatedTime))->format('%i')/60),
+				'remaining' => is_null( $package->remainingTime ) ? 0 : ((new \DateInterval($package->remainingTime))->format('%h') + (new \DateInterval($package->remainingTime))->format('%i')/60)
 			];
 		}
 		return $work_packages;
@@ -895,6 +932,7 @@ class Hooks {
 	 * taken from https://www.mediawiki.org/wiki/Manual:Parser_functions#Named_parameters
 	 *
 	 * @param array string $options
+	 *
 	 * @return array $results
 	 */
 	static function extractOptions( array $options ) {
