@@ -107,9 +107,14 @@ class Hooks {
 	 */
 	static function CallAPI( $url, $params = [] ) {
 		$hash = md5( json_encode( [ $url, $params ] ) );
-		// already in the cash?
+		// already in the cash for the current request?
 		if( isset( self::$call_api_cache[$hash] ) ) {
 			return array( '200', self::$call_api_cache[$hash] );
+		}
+
+		$cache_key = $url . '-' . implode('-',$params);
+		if( apcu_exists( $cache_key ) ) {
+			return apcu_fetch( $cache_key );
 		}
 
 		$curl = curl_init();
@@ -127,7 +132,10 @@ class Hooks {
 		if( $code == '200' ) {
 			self::$call_api_cache[$hash] = $response;
 		}
-		return array( $code, $response );
+		$return = array( $code, $response );
+
+		apcu_store( $cache_key, $return, 60*5);
+		return $return;
 	}
 
 
