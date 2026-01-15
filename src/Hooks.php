@@ -134,7 +134,7 @@ class Hooks {
 		}
 		$return = array( $code, $response );
 
-		apcu_store( $cache_key, $return, 60*5);
+		apcu_store( $cache_key, $return, 60*1);
 		return $return;
 	}
 
