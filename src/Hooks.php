@@ -709,43 +709,59 @@ class Hooks {
 	 */
 	static function WorkPackageList( $work_packages, $options ) {
 		$list = '';
+		$options['hide_assignee'] = true;
 
 		self::enrichWorkPackages( $work_packages );
 		$sums = self::summarizeWorkPackages( $work_packages );
 
 		if( isset( $options['cluster'] ) && $options['cluster'] ) {
-			$cluster = self::clusterWorkPackagesByProject( $work_packages );
+			if( $options['cluster'] == 'assignee' ) {
+				$cluster = self::clusterWorkPackagesByAssignee( $work_packages );
+				ksort($cluster);
+				foreach( $cluster as $id => &$assignee ) {
+					$list .= '<div>' . $id . ' <small>(' . $assignee['storyPoints'] . ')</small></div>';
 
-			foreach( $cluster as $id => &$project ) {
-				$cluster_hours = self::summarizeWorkPackages( $project['work_packages'] );
-				$cluster_heading = '<a href="' . $project['href'] . '">' . $project['title'] . '</a>' . ( isset( $options['story_points'] ) && $options['story_points'] ? ' <small>(' . $project['storyPoints'] . ')</small>' : '' );
-				$cluster_heading_template = \Title::newFromText( 'Template:op-cluster-heading' );
-				if( $cluster_heading_template->exists() ) {
-					$cluster_heading = $GLOBALS['wgParser']->recursiveTagParse( '{{op-cluster-heading
-						|href=' . $project['href'] . '
-						|title=' . $project['title'] . '
-						|story_points=' . $project['storyPoints'] . '
-						|id=' . $id . '
-				}}' );
-				}
-				$list .= '<tr><td style="font-size:small">' . $cluster_heading . '</td>';
-
-				$work_package_list = '';
-				foreach( $project['work_packages'] as $package ) {
-					// exclude work packages with children
-					if( isset( $package->_links->children ) ) {
-				 		continue;		
+					$work_package_list = '';
+					foreach( $assignee['work_packages'] as $package ) {
+						$work_package_list .= self::WorkPackageListItem( $package, $options );
 					}
-					$link = self::WorkPackageListItem( $package, $options );
 
-					if( $package->closed ) {
-						$work_package_list .= $link;
-					} else {
-						$work_package_list = $link . $work_package_list;
-					}
+					$list .= '<ul class="op-wp-list mb-2">' . $work_package_list . '</ul>';
 				}
+			} else {
+				$cluster = self::clusterWorkPackagesByProject( $work_packages );
 
-				$list .= '<td style="font-size:small" class="border-right"><ul class="op-wp-list">' . $work_package_list . '</ul></td><td class="semorg-showedit"></td></tr>';
+				foreach( $cluster as $id => &$project ) {
+					$cluster_hours = self::summarizeWorkPackages( $project['work_packages'] );
+					$cluster_heading = '<a href="' . $project['href'] . '">' . $project['title'] . '</a>' . ( isset( $options['story_points'] ) && $options['story_points'] ? ' <small>(' . $project['storyPoints'] . ')</small>' : '' );
+					$cluster_heading_template = \Title::newFromText( 'Template:op-cluster-heading' );
+					if( $cluster_heading_template->exists() ) {
+						$cluster_heading = $GLOBALS['wgParser']->recursiveTagParse( '{{op-cluster-heading
+							|href=' . $project['href'] . '
+							|title=' . $project['title'] . '
+							|story_points=' . $project['storyPoints'] . '
+							|id=' . $id . '
+					}}' );
+					}
+					$list .= '<tr><td style="font-size:small">' . $cluster_heading . '</td>';
+
+					$work_package_list = '';
+					foreach( $project['work_packages'] as $package ) {
+						// exclude work packages with children
+						if( isset( $package->_links->children ) ) {
+							continue;		
+						}
+						$link = self::WorkPackageListItem( $package, $options );
+
+						if( $package->closed ) {
+							$work_package_list .= $link;
+						} else {
+							$work_package_list = $link . $work_package_list;
+						}
+					}
+
+					$list .= '<td style="font-size:small" class="border-right"><ul class="op-wp-list">' . $work_package_list . '</ul></td><td class="semorg-showedit"></td></tr>';
+				}
 			}
 		} else {
 			foreach( $work_packages as $package ) {
@@ -894,6 +910,46 @@ class Hooks {
 	}
 
 
+	/**
+	 * Cluster work packages by assignee
+	 *
+	 * @param Array $work_packages
+	 *
+	 * @return Array Clustered work packages
+	 */
+	static function clusterWorkPackagesByAssignee( $work_packages ) {
+		$cluster = [];
+		foreach( $work_packages as $package ) {
+			$assignee = $package->_links->assignee->title ?? '-';
+			if( !isset( $cluster[$assignee] ) ) {
+				$cluster[$assignee] = [
+					'title' => $assignee,
+					'hours' => [
+						'open' => [
+							'estimated' => 0,
+							'derivedEstimated' => 0,
+							'remaining' => 0
+						],
+						'closed' => [
+							'estimated' => 0,
+							'derivedEstimated' => 0,
+							'remaining' => 0
+						],
+					],
+					'storyPoints' => 0,
+					'work_packages' => []
+				];
+			}
+			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['estimated'] += is_null( $package->estimatedTime ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h');
+			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['derivedEstimated'] += is_null( $package->derivedEstimatedTime ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h');
+			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['remaining'] += is_null( $package->remainingTime ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h');
+			$cluster[$assignee]['storyPoints'] += $package->storyPoints ?? 0;
+			$cluster[$assignee]['work_packages'][] = $package;
+		}
+		return $cluster;
+	}
+
+
 	/*
 	 * Create a html list for work package list item
 	 *
@@ -908,6 +964,7 @@ class Hooks {
 		if( isset( $package->_links->assignee->title ) 
 			&& $package->_links->assignee->title != '' 
 			&& ( !isset( $options['assignee'] ) || $options['assignee'] != 'me' )
+			&& ( !isset( $options['hide_assignee'] ) || $options['hide_assignee'] == false )
 		) {
 			$link .= ' <span class="op-wp-project">(' . $package->_links->assignee->title . ')</span> ';
 		}
