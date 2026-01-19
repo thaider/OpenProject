@@ -107,14 +107,17 @@ class Hooks {
 	 */
 	static function CallAPI( $url, $params = [] ) {
 		$hash = md5( json_encode( [ $url, $params ] ) );
-		// already in the cash for the current request?
-		if( isset( self::$call_api_cache[$hash] ) ) {
-			return array( '200', self::$call_api_cache[$hash] );
-		}
-
 		$cache_key = $url . '-' . implode('-',$params);
-		if( apcu_exists( $cache_key ) ) {
-			return apcu_fetch( $cache_key );
+
+		if( !isset( $params['assignee'] ) || $params['assignee'] !== 'me' ) {
+			// already in the cash for the current request?
+			if( isset( self::$call_api_cache[$hash] ) ) {
+				return array( '200', self::$call_api_cache[$hash] );
+			}
+
+			if( apcu_exists( $cache_key ) ) {
+				return apcu_fetch( $cache_key );
+			}
 		}
 
 		$curl = curl_init();
@@ -715,7 +718,7 @@ class Hooks {
 		$sums = self::summarizeWorkPackages( $work_packages );
 
 		if( isset( $options['cluster'] ) && $options['cluster'] ) {
-			if( $options['cluster'] == 'assignee' ) {
+			if( $options['cluster'] === 'assignee' ) {
 				$cluster = self::clusterWorkPackagesByAssignee( $work_packages );
 				ksort($cluster);
 				foreach( $cluster as $id => &$assignee ) {
