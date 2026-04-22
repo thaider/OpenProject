@@ -2,6 +2,8 @@
 
 namespace MediaWiki\Extension\OpenProject;
 
+use MediaWiki\MediaWikiServices;
+
 /**
  * Hooks for OpenProject
  *
@@ -76,7 +78,7 @@ class Hooks {
 			if( !isset( $options['name'] ) ) {
 				return self::renderError( 'name not set', 'backlog' );
 			} else {
-				$options['version'] = self::getVersionIDFromName( $options['name'] );
+				$options['version'] = self::getVersionIDFromName( $parser, $options['name'] );
 			}
 		}
 		if( !$options['version'] ) {
@@ -85,7 +87,7 @@ class Hooks {
 
 		$options['type_id'] = '6,7';
 		$options['sortBy'] = ['storyPoints','asc'];
-		$work_packages = self::getWorkPackages( $options );
+		$work_packages = self::getWorkPackages( $parser, $options );
 
 		$options['story_points'] = true;
 		$list = self::WorkPackageList( $work_packages, $options );
@@ -98,6 +100,7 @@ class Hooks {
 	/*
 	 * Send call to RESTful API
 	 *
+	 * @param Parser $parser
 	 * @param string $url
 	 * @param array $params
 	 *
@@ -105,7 +108,7 @@ class Hooks {
 	 *
 	 * TODO: check for availability of cURL
 	 */
-	static function CallAPI( $url, $params = [] ) {
+	static function CallAPI( $parser, $url, $params = [] ) {
 		$hash = md5( json_encode( [ $url, $params ] ) );
 		$cache_key = $url . '-' . implode('-',$params);
 
@@ -124,7 +127,9 @@ class Hooks {
 		$url = $GLOBALS['wgOpenProjectURL'] . '/api/v3/' . $url;
 		$url .= '?' . http_build_query( $params );
 
-		$userpwd = 'apikey:' . $GLOBALS['wgUser']->getOption('openproject-apikey');
+		$uom = MediaWikiServices::getInstance()->getUserOptionsManager();
+		$user = $parser->getUserIdentity();
+		$userpwd = 'apikey:' . $uom->getOption($user, 'openproject-apikey');
 
 		curl_setopt( $curl, CURLOPT_URL, $url );
 		curl_setopt( $curl, CURLOPT_USERPWD, $userpwd );
@@ -158,7 +163,7 @@ class Hooks {
 		}
 
 		$params = array();
-		list( $code, $response ) = self::CallAPI( 'projects/' . $project );
+		list( $code, $response ) = self::CallAPI( $parser, 'projects/' . $project );
 
 		if( $code != '200' ) {
 			return '<div class="op-error">Abfrage fehlgeschlagen (Fehlercode: ' . $code . ')</div>';
@@ -191,7 +196,7 @@ class Hooks {
 		}
 
 		$params = array();
-		list( $code, $response ) = self::CallAPI( 'versions/' . $version . '/projects' );
+		list( $code, $response ) = self::CallAPI( $parser, 'versions/' . $version . '/projects' );
 
 		if( $code != '200' ) {
 			return '<div class="op-error">Abfrage fehlgeschlagen (Fehlercode: ' . $code . ')</div>';
@@ -227,7 +232,7 @@ class Hooks {
 		}
 
 		$params = array( 'filters' => '[{"version":{"operator":"=","values":["' . $version . '"]}}]' );
-		list( $code, $response ) = self::CallAPI( 'projects/' . $project . '/work_packages', $params );
+		list( $code, $response ) = self::CallAPI( $parser, 'projects/' . $project . '/work_packages', $params );
 
 		if( $code != '200' ) {
 			return '<div class="op-error">Abfrage fehlgeschlagen (Fehlercode: ' . $code . ')</div>';
@@ -247,11 +252,12 @@ class Hooks {
 	/*
 	 * Get Work packages
 	 *
+	 * @param Parser $parser
 	 * @param Array $options Filter criteria
 	 *
 	 * @return Array Work package list
 	 */
-	static function getWorkPackages( $options ) {
+	static function getWorkPackages( $parser, $options ) {
 		if( !isset( $options['project'] ) || !isset( $options['version'] ) ) {
 			return '<div class="op-warning">Parameter missing.</div>';
 		}
@@ -309,7 +315,7 @@ class Hooks {
 		}
 
 		$url = 'projects/' . $options['project'] . '/work_packages';
-		list( $code, $response ) = self::CallAPI( $url, $params );
+		list( $code, $response ) = self::CallAPI( $parser, $url, $params );
 
 		if( $code != '200' ) {
 			return '<div class="op-error">Abfrage fehlgeschlagen (Fehlercode: ' . $code . ')</div>';
@@ -323,18 +329,19 @@ class Hooks {
 	/**
 	 * Get versions
 	 *
+	 * @param Parser $parser
 	 * @param Integer $project Specific project
 	 * @param Array $params Parameters
 	 *
 	 * @return Object Versions
 	 */
-	static function getVersions( $params= [], $project = null ) {
+	static function getVersions( $parser, $params= [], $project = null ) {
 		$url = 'versions';
 		$project = self::getProjectID( $project );
 		if( !is_null( $project ) ) {
 			$url = 'projects/' . $project . '/versions';
 		}
-		list( $code, $response ) = self::CallAPI( $url, $params );
+		list( $code, $response ) = self::CallAPI( $parser, $url, $params );
 		if( !is_null( $response ) && property_exists($response, '_embedded') && property_exists($response->_embedded, 'elements') ) {
 			$versions = $response->_embedded->elements;
 		} else {
@@ -347,18 +354,19 @@ class Hooks {
 	/*
 	 * Get all versions and their work packages for a specific date
 	 *
+	 * @param Parser $parser
 	 * @param DateTime $date Date to be looked at
 	 * @param $project Specific project
 	 * @param Array $params Parameters
 	 *
 	 * @return Array Versions and their work packages
 	 */
-	static function getCurrentVersions( $date = null, $project = null, $params = [] ) {
+	static function getCurrentVersions( $parser, $date = null, $project = null, $params = [] ) {
 		$future = 7;
 		if( is_null( $date ) || $date == '' ) {
 			$date = time();
 		}
-		$versions = self::getVersions( $params, $project );
+		$versions = self::getVersions( $parser, $params, $project );
 		usort( $versions, function($a, $b) {
 			return $a->startDate <=> $b->startDate;
 		});
@@ -375,7 +383,7 @@ class Hooks {
 				$project = substr( $project_href, strrpos($project_href, '/')+1);
 				$work_packages[] = [
 					'version' => $version,
-					'work_packages' => self::getWorkPackages( array_merge( $params, [ 'project' => $project, 'version' => $version->id ] ) )
+					'work_packages' => self::getWorkPackages( $parser, array_merge( $params, [ 'project' => $project, 'version' => $version->id ] ) )
 				];
 			}
 		}
@@ -393,7 +401,7 @@ class Hooks {
 		$params = self::extractOptions( array_slice(func_get_args(), 2) );
 		$date = time();
 		$future = 7;
-		$versions = self::getVersions( $params, $project );
+		$versions = self::getVersions( $parser, $params, $project );
 		usort( $versions, function($a, $b) {
 			return $a->startDate <=> $b->startDate;
 		});
@@ -423,7 +431,7 @@ class Hooks {
 		$params = self::extractOptions( array_slice(func_get_args(), 2) );
 		$date = time();
 		$future = 7;
-		$versions = self::getVersions( $params, $project );
+		$versions = self::getVersions( $parser, $params, $project );
 		usort( $versions, function($a, $b) {
 			return $a->startDate <=> $b->startDate;
 		});
@@ -437,7 +445,7 @@ class Hooks {
 			) {
 				$project_href = $version->_links->definingProject->href;
 				$project = substr( $project_href, strrpos($project_href, '/')+1);
-				$work_packages = self::getWorkPackages( array_merge( $params, [ 'project' => $project, 'version' => $version->id ] ) );
+				$work_packages = self::getWorkPackages( $parser, array_merge( $params, [ 'project' => $project, 'version' => $version->id ] ) );
 				self::enrichWorkPackages( $work_packages );
 				$sums = self::summarizeWorkPackages( $work_packages );
 				return $sums['hours']['nochildren'];
@@ -452,7 +460,7 @@ class Hooks {
 	 */
 	static function Tasks( \Parser &$parser ) {
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
-		$list = self::getVersionsWithWorkPackages( $options );
+		$list = self::getVersionsWithWorkPackages( $parser, $options );
 		return array( $list, 'noparse' => true, 'isHTML' => true );
 	}
 
@@ -466,7 +474,7 @@ class Hooks {
 			$options['assignee'] = 'me';
 		}
 		$options['hours'] = true;
-		$list = self::getVersionsWithWorkPackages( $options );
+		$list = self::getVersionsWithWorkPackages( $parser, $options );
 		return array( $list, 'noparse' => true, 'isHTML' => true );
 	}
 
@@ -474,10 +482,11 @@ class Hooks {
 	/**
 	 * Get Version ID for a version with a specific name
 	 *
+	 * @param Parser $parser
 	 * @param string $name Name of the version
 	 */
-	static function getVersionIDFromName( $name ) {
-		$versions = self::getVersions();
+	static function getVersionIDFromName( $parser, $name ) {
+		$versions = self::getVersions( $parser );
 		foreach( $versions as $version ) {
 			if( preg_match( '|' . $name . '|', $version->name ) ) {
 				return $version->id;
@@ -503,15 +512,16 @@ class Hooks {
 	/*
 	 * Get Versions with Work Packages
 	 *
+	 * @param Parser $parser
 	 * @param array $options Options
 	 */
-	static function getVersionsWithWorkPackages( $options ) {
+	static function getVersionsWithWorkPackages( $parser, $options ) {
 		//$options['overview'] = true;
 		$options['cluster'] = true;
 		$project = self::getProjectID( $options['project'] ?? null );
 		$date = isset( $options['date'] ) ? strtotime( $options['date'] ) : null;
 
-		$versions = self::getCurrentVersions( $date, $project, $options );
+		$versions = self::getCurrentVersions( $parser, $date, $project, $options );
 		$list = '';
 		if( is_array( $versions ) ) {
 			foreach( $versions as $version ) {
@@ -548,7 +558,7 @@ class Hooks {
 		}
 
 		$params = [];
-		list( $code, $response ) = self::CallAPI( 'projects/' . $project . '/work_packages', $params );
+		list( $code, $response ) = self::CallAPI( $parser, 'projects/' . $project . '/work_packages', $params );
 
 		if( $code != '200' ) {
 			return '<div class="op-error">Abfrage fehlgeschlagen (Fehlercode: ' . $code . ')</div>';
@@ -576,7 +586,7 @@ class Hooks {
 			if( !isset( $options['name'] ) ) {
 				return self::renderError( 'name not set', 'storypoints' );
 			} else {
-				$options['version'] = self::getVersionIDFromName( $options['name'] );
+				$options['version'] = self::getVersionIDFromName( $parser, $options['name'] );
 			}
 		}
 		if( !$options['version'] ) {
@@ -587,7 +597,7 @@ class Hooks {
 		$options['project'] = 1;
 
 		$options['type_id'] = '6,7';
-		$work_packages = self::getWorkPackages( $options );
+		$work_packages = self::getWorkPackages( $parser, $options );
 
 		self::enrichWorkPackages( $work_packages );
 
@@ -615,7 +625,7 @@ class Hooks {
 		}
 
 		$params = array();
-		list( $code, $response ) = self::CallAPI( '/work_packages/' . $wp, $params );
+		list( $code, $response ) = self::CallAPI( $parser, '/work_packages/' . $wp, $params );
 
 		if( $code != '200' ) {
 			return '<div class="op-error">Abfrage fehlgeschlagen (Fehlercode: ' . $code . ')</div>';
