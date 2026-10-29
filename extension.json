@@ -14,15 +14,22 @@
 	"AutoloadClasses": {
 		"MediaWiki\\Extension\\OpenProject\\Hooks": "src/Hooks.php",
 		"MediaWiki\\Extension\\OpenProject\\OpenProjectClient": "src/OpenProjectClient.php",
-		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose": "src/ApiOpenProjectClose.php"
+		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose": "src/ApiOpenProjectClose.php",
+		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectBase": "src/ApiOpenProjectBase.php",
+		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectCreate": "src/ApiOpenProjectCreate.php",
+		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectMeta": "src/ApiOpenProjectMeta.php"
 	},
 	"APIModules": {
-		"openproject-close": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose"
+		"openproject-close": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose",
+		"openproject-create": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectCreate",
+		"openproject-meta": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectMeta"
 	},
 	"config": {
 		"OpenProjectURL": false,
 		"OpenProjectProjectID": false,
-		"OpenProjectClosedStatusID": 10
+		"OpenProjectClosedStatusID": 10,
+		"OpenProjectDefaultTypeID": 0,
+		"OpenProjectDefaultStoryPoints": 1
 	},
 	"ExtensionMessagesFiles": {
 		"OpenProjectMagic": "OpenProject.i18n.magic.php"
@@ -49,7 +56,9 @@
 	"ResourceModules": {
 		"ext.openproject": {
 			"dependencies": [
-				"mediawiki.api"
+				"mediawiki.api",
+				"oojs-ui-core",
+				"oojs-ui-windows"
 			],
 			"scripts": [
 				"modules/ext.openproject.js"
@@ -58,6 +67,19 @@
 				"modules/ext.openproject.css"
 			],
 			"messages": [
+				"openproject-create-title",
+				"openproject-create-subject",
+				"openproject-create-description",
+				"openproject-create-assignee",
+				"openproject-create-storypoints",
+				"openproject-create-version",
+				"openproject-create-type",
+				"openproject-create-project",
+				"openproject-create-project-select",
+				"openproject-create-submit",
+				"openproject-create-cancel",
+				"openproject-create-success",
+				"openproject-create-loading-failed"
 			]
 		}
 	},
