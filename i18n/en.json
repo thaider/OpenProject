@@ -7,5 +7,12 @@
 	"openproject-remaining": "remaining",
 	"openproject-completed": "completed",
 	"openproject-overview-storypoints": "$1 Story Points total",
-	"openproject-close-workpackage": "Close work package"
+	"openproject-close-workpackage": "Close work package",
+	"apihelp-openproject-close-summary": "Close a work package in OpenProject (and its parent, if no open children are left).",
+	"apihelp-openproject-close-param-id": "ID of the work package to close.",
+	"apihelp-openproject-close-example-1": "Close work package 123",
+	"openproject-api-nokey": "No OpenProject API token set. Please add it in your preferences.",
+	"openproject-api-unauthenticated": "OpenProject rejected your API token. Please check it in your preferences.",
+	"openproject-api-conflict": "The work package was changed in the meantime. Please reload the page and try again.",
+	"openproject-api-error": "OpenProject request failed (status $1): $2"
 }

@@ -8,12 +8,21 @@
 	"descriptionmsg": "openproject-desc",
 	"license-name": "GPL",
 	"type": "other",
+	"requires": {
+		"MediaWiki": ">= 1.36.0"
+	},
 	"AutoloadClasses": {
-		"MediaWiki\\Extension\\OpenProject\\Hooks": "src/Hooks.php"
+		"MediaWiki\\Extension\\OpenProject\\Hooks": "src/Hooks.php",
+		"MediaWiki\\Extension\\OpenProject\\OpenProjectClient": "src/OpenProjectClient.php",
+		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose": "src/ApiOpenProjectClose.php"
+	},
+	"APIModules": {
+		"openproject-close": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose"
 	},
 	"config": {
 		"OpenProjectURL": false,
-		"OpenProjectProjectID": false
+		"OpenProjectProjectID": false,
+		"OpenProjectClosedStatusID": 10
 	},
 	"ExtensionMessagesFiles": {
 		"OpenProjectMagic": "OpenProject.i18n.magic.php"
@@ -39,6 +48,9 @@
 	},
 	"ResourceModules": {
 		"ext.openproject": {
+			"dependencies": [
+				"mediawiki.api"
+			],
 			"scripts": [
 				"modules/ext.openproject.js"
 			],

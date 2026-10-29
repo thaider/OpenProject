@@ -7,5 +7,12 @@
 	"openproject-remaining": "verbleibend",
 	"openproject-completed": "abgeschlossen",
 	"openproject-overview-storypoints": "$1 Story Points insgesamt",
-	"openproject-close-workpackage": "Arbeitspaket schließen"
+	"openproject-close-workpackage": "Arbeitspaket schließen",
+	"apihelp-openproject-close-summary": "Schließt ein Arbeitspaket in OpenProject (und das übergeordnete, wenn keine offenen Unterpakete mehr vorhanden sind).",
+	"apihelp-openproject-close-param-id": "ID des zu schließenden Arbeitspakets.",
+	"apihelp-openproject-close-example-1": "Arbeitspaket 123 schließen",
+	"openproject-api-nokey": "Es ist kein OpenProject-API-Token hinterlegt. Bitte in den Einstellungen eintragen.",
+	"openproject-api-unauthenticated": "OpenProject hat das API-Token abgelehnt. Bitte in den Einstellungen prüfen.",
+	"openproject-api-conflict": "Das Arbeitspaket wurde zwischenzeitlich geändert. Bitte die Seite neu laden und es erneut versuchen.",
+	"openproject-api-error": "OpenProject-Anfrage fehlgeschlagen (Status $1): $2"
 }

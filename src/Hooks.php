@@ -73,6 +73,7 @@ class Hooks {
 	 * @param String $name Name of the Backlog version
 	 */
 	static function renderBacklog( \Parser &$parser ) {
+		$parser->getOutput()->updateCacheExpiry(0);
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		if( !isset( $options['version'] ) ) {
 			if( !isset( $options['name'] ) ) {
@@ -109,41 +110,19 @@ class Hooks {
 	 * TODO: check for availability of cURL
 	 */
 	static function CallAPI( $parser, $url, $params = [] ) {
-		$hash = md5( json_encode( [ $url, $params ] ) );
-		$cache_key = $url . '-' . implode('-',$params);
+		$user = $parser->getUserIdentity();
+		$hash = md5( json_encode( [ $user->getId(), $url, $params ] ) );
 
-		if( !isset( $params['assignee'] ) || $params['assignee'] !== 'me' ) {
-			// already in the cash for the current request?
-			if( isset( self::$call_api_cache[$hash] ) ) {
-				return array( '200', self::$call_api_cache[$hash] );
-			}
-
-			if( apcu_exists( $cache_key ) ) {
-				//return apcu_fetch( $cache_key );
-			}
+		// already in the cache for the current request?
+		if( isset( self::$call_api_cache[$hash] ) ) {
+			return array( '200', self::$call_api_cache[$hash] );
 		}
 
-		$curl = curl_init();
-		$url = $GLOBALS['wgOpenProjectURL'] . '/api/v3/' . $url;
-		$url .= '?' . http_build_query( $params );
-
-		$uom = MediaWikiServices::getInstance()->getUserOptionsManager();
-		$user = $parser->getUserIdentity();
-		$userpwd = 'apikey:' . $uom->getOption($user, 'openproject-apikey');
-
-		curl_setopt( $curl, CURLOPT_URL, $url );
-		curl_setopt( $curl, CURLOPT_USERPWD, $userpwd );
-		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-		$response = json_decode( curl_exec( $curl ) );
-		$code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-		curl_close( $curl );
+		list( $code, $response ) = OpenProjectClient::cachedGet( $url, $params, $user );
 		if( $code == '200' ) {
 			self::$call_api_cache[$hash] = $response;
 		}
-		$return = array( $code, $response );
-
-		apcu_store( $cache_key, $return, 60*1);
-		return $return;
+		return array( $code, $response );
 	}
 
 
@@ -459,6 +438,7 @@ class Hooks {
 	 * Show all open work packages for a project
 	 */
 	static function Tasks( \Parser &$parser ) {
+		$parser->getOutput()->updateCacheExpiry(0);
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		$list = self::getVersionsWithWorkPackages( $parser, $options );
 		return array( $list, 'noparse' => true, 'isHTML' => true );
@@ -469,6 +449,7 @@ class Hooks {
 	 * Show all my open work packages
 	 */
 	static function MyTasks( \Parser &$parser ) {
+		$parser->getOutput()->updateCacheExpiry(0);
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		if( !isset( $options['assignee'] ) ) {
 			$options['assignee'] = 'me';
@@ -807,7 +788,7 @@ class Hooks {
 	 *
 	 * @return Array Sums
 	 */
-	static function summarizeWorkPackages( $work_packages,  ) {
+	static function summarizeWorkPackages( $work_packages ) {
 		$hours = [
 			'open' => [
 				'remaining' => 0,
@@ -869,7 +850,7 @@ class Hooks {
 			$package->href = $GLOBALS['wgOpenProjectURL'] . '/work_packages/' . $package->id;
 
 			// TODO: make statuses considered "closed" configurable
-			$package->closed = $package->status_id === '10';
+			$package->closed = $package->status_id === (string)( $GLOBALS['wgOpenProjectClosedStatusID'] ?? 10 );
 
 			$package->hours = [
 				'estimated' => is_null( $package->estimatedTime ) ? 0 : ((new \DateInterval($package->estimatedTime))->format('%h') + (new \DateInterval($package->estimatedTime))->format('%i')/60),
