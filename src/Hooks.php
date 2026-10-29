@@ -438,7 +438,6 @@ class Hooks {
 	 * Show all open work packages for a project
 	 */
 	static function Tasks( \Parser &$parser ) {
-		$parser->getOutput()->updateCacheExpiry(0);
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		$list = self::getVersionsWithWorkPackages( $parser, $options );
 		return array( $list, 'noparse' => true, 'isHTML' => true );
@@ -449,7 +448,6 @@ class Hooks {
 	 * Show all my open work packages
 	 */
 	static function MyTasks( \Parser &$parser ) {
-		$parser->getOutput()->updateCacheExpiry(0);
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		if( !isset( $options['assignee'] ) ) {
 			$options['assignee'] = 'me';

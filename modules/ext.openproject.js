@@ -64,10 +64,18 @@ $( function() {
 		field( this.versionSelect, 'openproject-create-version' );
 
 		this.projectSelect.on( 'change', this.loadProject.bind( this ) );
+		this.projectSelect.on( 'change', this.updateSaveAbility.bind( this ) );
 
 		this.content = new OO.ui.PanelLayout( { padded: true, expanded: false } );
 		this.content.$element.append( fields.map( function( f ) { return f.$element; } ) );
 		this.$body.append( this.content.$element );
+	};
+
+	/**
+	 * Saving needs a project
+	 */
+	CreateTaskDialog.prototype.updateSaveAbility = function() {
+		this.actions.setAbilities( { save: !!( this.project || this.projectSelect.getValue() ) } );
 	};
 
 	CreateTaskDialog.prototype.getBodyHeight = function() {
@@ -78,6 +86,7 @@ $( function() {
 		var dialog = this;
 		return CreateTaskDialog.super.prototype.getSetupProcess.call( this, data ).next( function() {
 			var api = new mw.Api(), request;
+			dialog.updateSaveAbility();
 			if ( dialog.project ) {
 				request = dialog.loadProject();
 			} else {
@@ -91,7 +100,8 @@ $( function() {
 				} );
 			}
 			dialog.pushPending();
-			return request.fail( function() {
+			// a failed load is reported but must not abort the setup (and thereby the dialog)
+			return request.then( null, function() {
 				mw.notify( mw.msg( 'openproject-create-loading-failed' ), { type: 'error' } );
 			} ).always( function() {
 				dialog.popPending();
@@ -100,15 +110,20 @@ $( function() {
 	};
 
 	/**
-	 * Load types, versions and assignees of the selected project
+	 * Load versions and assignees of the selected project
 	 */
 	CreateTaskDialog.prototype.loadProject = function() {
 		var dialog = this,
-			project = this.project || this.projectSelect.getValue();
+			project = this.project || this.projectSelect.getValue(),
+			requestId = ( this.loadRequestId = ( this.loadRequestId || 0 ) + 1 );
 		if ( !project ) {
 			return $.Deferred().resolve().promise();
 		}
 		return new mw.Api().get( { action: 'openproject-meta', mode: 'project', id: project } ).then( function( result ) {
+			if ( requestId !== dialog.loadRequestId ) {
+				// the project was changed meanwhile, this response is outdated
+				return;
+			}
 			var meta = result[ 'openproject-meta' ];
 			var assignees = options( meta.assignees );
 			if ( !assignees.some( function( a ) { return a.data === String( meta.me ); } ) ) {
@@ -117,12 +132,14 @@ $( function() {
 			dialog.assignee.setOptions( assignees );
 			dialog.assignee.setValue( String( meta.me ) );
 			var versions = options( meta.versions );
-			// the preselected sprint must stay selectable even if the project's version list lacks it
-			if ( dialog.version && !versions.some( function( v ) { return v.data === String( dialog.version ); } ) ) {
+			var hasVersion = versions.some( function( v ) { return v.data === String( dialog.version ); } );
+			// with a fixed project the preselected sprint must stay selectable even if the version list lacks it;
+			if ( dialog.version && !hasVersion && dialog.project ) {
 				versions.unshift( { data: String( dialog.version ), label: dialog.versionName || '#' + dialog.version } );
+				hasVersion = true;
 			}
 			dialog.versionSelect.setOptions( [ { data: '', label: '-' } ].concat( versions ) );
-			dialog.versionSelect.setValue( String( dialog.version ) );
+			dialog.versionSelect.setValue( hasVersion ? String( dialog.version ) : '' );
 			dialog.storyPoints.setValue( meta.defaultStoryPoints );
 		} );
 	};
@@ -133,18 +150,22 @@ $( function() {
 			return CreateTaskDialog.super.prototype.getActionProcess.call( this, action );
 		}
 		return new OO.ui.Process( function() {
-			var api = new mw.Api();
+			var api = new mw.Api(),
+				subject = dialog.subject.getValue().trim();
+			if ( !subject ) {
+				dialog.subject.focus();
+				return $.Deferred().reject( new OO.ui.Error( mw.msg( 'openproject-create-subject-missing' ), { recoverable: true } ) ).promise();
+			}
 			dialog.pushPending();
 			return api.postWithToken( 'csrf', {
 				action: 'openproject-create',
 				project: dialog.project || dialog.projectSelect.getValue(),
-				subject: dialog.subject.getValue(),
+				subject: subject,
 				description: dialog.description.getValue(),
 				assignee: dialog.assignee.getValue(),
 				storypoints: dialog.storyPoints.getValue(),
 				version: dialog.versionSelect.getValue()
 			} ).then( function( result ) {
-				mw.notify( mw.msg( 'openproject-create-success', result[ 'openproject-create' ].id ) );
 				// reload so the new task shows up in the list
 				dialog.close( { reload: true } );
 				return dialog.closing;
@@ -163,16 +184,23 @@ $( function() {
 		} );
 	};
 
+	// one window manager for all "+" buttons
+	var windowManager;
+
 	$( '.op-wp-add' ).click( function() {
-		var $button = $( this ),
+		var $button = $( this );
+		if ( !windowManager ) {
 			windowManager = new OO.ui.WindowManager();
-		$( document.body ).append( windowManager.$element );
+			$( document.body ).append( windowManager.$element );
+		}
 		var dialog = new CreateTaskDialog( {
 			project: $button.data( 'project' ) || null,
 			version: $button.data( 'version' ) || '',
 			versionName: $button.data( 'version-name' ) || ''
 		} );
 		windowManager.addWindows( [ dialog ] );
-		windowManager.openWindow( dialog );
+		windowManager.openWindow( dialog ).closed.then( function() {
+			windowManager.clearWindows();
+		} );
 	} );
 });

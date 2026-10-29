@@ -69,16 +69,15 @@
 			"messages": [
 				"openproject-create-title",
 				"openproject-create-subject",
+				"openproject-create-subject-missing",
 				"openproject-create-description",
 				"openproject-create-assignee",
 				"openproject-create-storypoints",
 				"openproject-create-version",
-				"openproject-create-type",
 				"openproject-create-project",
 				"openproject-create-project-select",
 				"openproject-create-submit",
 				"openproject-create-cancel",
-				"openproject-create-success",
 				"openproject-create-loading-failed"
 			]
 		}

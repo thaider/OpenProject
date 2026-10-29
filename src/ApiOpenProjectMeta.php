@@ -25,7 +25,6 @@ class ApiOpenProjectMeta extends ApiOpenProjectBase {
 			if( !$id ) {
 				$this->dieWithError( [ 'apierror-missingparam', 'id' ], 'missingparam' );
 			}
-			$types = $this->call( 'GET', 'projects/' . $id . '/types', [], null, true );
 			$versions = $this->call( 'GET', 'projects/' . $id . '/versions', [], null, true );
 			$assignees = $this->call( 'GET', 'projects/' . $id . '/available_assignees', [ 'pageSize' => 1000 ], null, true );
 			$me = $this->call( 'GET', 'users/me', [], null, true );
@@ -38,7 +37,6 @@ class ApiOpenProjectMeta extends ApiOpenProjectBase {
 			}
 
 			$result = [
-				'types' => self::idNameList( $types ),
 				'versions' => $open_versions,
 				'assignees' => self::idNameList( $assignees ),
 				'me' => (int)$me->id,

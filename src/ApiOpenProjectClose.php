@@ -2,28 +2,15 @@
 
 namespace MediaWiki\Extension\OpenProject;
 
-use ApiBase;
-use ApiMain;
 use Wikimedia\ParamValidator\ParamValidator;
 
 /**
- * API module to close a work package in OpenProject (and its parent,
- * if no open siblings are left)
+ * API module to close a work package in OpenProject
  */
-class ApiOpenProjectClose extends ApiBase {
-
-	public function __construct( ApiMain $main, $action ) {
-		parent::__construct( $main, $action );
-	}
+class ApiOpenProjectClose extends ApiOpenProjectBase {
 
 	public function execute() {
-		$user = $this->getUser();
-		if( !$user->isRegistered() ) {
-			$this->dieWithError( 'apierror-mustbeloggedin-generic', 'notloggedin' );
-		}
-		if( OpenProjectClient::getApiKey( $user ) === '' ) {
-			$this->dieWithError( 'openproject-api-nokey', 'nokey' );
-		}
+		$this->checkUser();
 
 		$id = $this->getParameter( 'id' );
 		$closed = [];
@@ -58,25 +45,6 @@ class ApiOpenProjectClose extends ApiBase {
 			'_links' => [ 'status' => [ 'href' => '/api/v3/statuses/' . $status_id ] ],
 			'lockVersion' => $wp->lockVersion
 		] );
-	}
-
-	/**
-	 * Call OpenProject, abort with an API error on failure
-	 */
-	protected function call( $method, $path, array $params = [], $body = null ) {
-		list( $code, $response ) = OpenProjectClient::request( $method, $path, $params, $body, $this->getUser() );
-		if( $code < 200 || $code >= 300 ) {
-			$message = $response->message ?? '';
-			switch( $code ) {
-				case 401:
-					$this->dieWithError( 'openproject-api-unauthenticated', 'unauthenticated' );
-				case 409:
-					$this->dieWithError( 'openproject-api-conflict', 'conflict' );
-				default:
-					$this->dieWithError( [ 'openproject-api-error', $code, $message ], 'openproject-' . $code );
-			}
-		}
-		return $response;
 	}
 
 	public function mustBePosted() {
