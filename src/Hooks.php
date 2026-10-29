@@ -119,7 +119,7 @@ class Hooks {
 			}
 
 			if( apcu_exists( $cache_key ) ) {
-				return apcu_fetch( $cache_key );
+				//return apcu_fetch( $cache_key );
 			}
 		}
 
