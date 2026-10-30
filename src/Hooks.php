@@ -73,6 +73,7 @@ class Hooks {
 	 * @param String $name Name of the Backlog version
 	 */
 	static function renderBacklog( \Parser &$parser ) {
+		$parser->getOutput()->updateCacheExpiry(0);
 		$options = self::extractOptions( array_slice(func_get_args(), 1) );
 		if( !isset( $options['version'] ) ) {
 			if( !isset( $options['name'] ) ) {
@@ -109,41 +110,19 @@ class Hooks {
 	 * TODO: check for availability of cURL
 	 */
 	static function CallAPI( $parser, $url, $params = [] ) {
-		$hash = md5( json_encode( [ $url, $params ] ) );
-		$cache_key = $url . '-' . implode('-',$params);
+		$user = $parser->getUserIdentity();
+		$hash = md5( json_encode( [ $user->getId(), $url, $params ] ) );
 
-		if( !isset( $params['assignee'] ) || $params['assignee'] !== 'me' ) {
-			// already in the cash for the current request?
-			if( isset( self::$call_api_cache[$hash] ) ) {
-				return array( '200', self::$call_api_cache[$hash] );
-			}
-
-			if( apcu_exists( $cache_key ) ) {
-				//return apcu_fetch( $cache_key );
-			}
+		// already in the cache for the current request?
+		if( isset( self::$call_api_cache[$hash] ) ) {
+			return array( '200', self::$call_api_cache[$hash] );
 		}
 
-		$curl = curl_init();
-		$url = $GLOBALS['wgOpenProjectURL'] . '/api/v3/' . $url;
-		$url .= '?' . http_build_query( $params );
-
-		$uom = MediaWikiServices::getInstance()->getUserOptionsManager();
-		$user = $parser->getUserIdentity();
-		$userpwd = 'apikey:' . $uom->getOption($user, 'openproject-apikey');
-
-		curl_setopt( $curl, CURLOPT_URL, $url );
-		curl_setopt( $curl, CURLOPT_USERPWD, $userpwd );
-		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
-		$response = json_decode( curl_exec( $curl ) );
-		$code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
-		curl_close( $curl );
+		list( $code, $response ) = OpenProjectClient::cachedGet( $url, $params, $user );
 		if( $code == '200' ) {
 			self::$call_api_cache[$hash] = $response;
 		}
-		$return = array( $code, $response );
-
-		apcu_store( $cache_key, $return, 60*1);
-		return $return;
+		return array( $code, $response );
 	}
 
 
@@ -516,6 +495,8 @@ class Hooks {
 	 * @param array $options Options
 	 */
 	static function getVersionsWithWorkPackages( $parser, $options ) {
+		// the list changes whenever tasks are created or closed
+		$parser->getOutput()->updateCacheExpiry(0);
 		//$options['overview'] = true;
 		$options['cluster'] = true;
 		$project = self::getProjectID( $options['project'] ?? null );
@@ -538,7 +519,9 @@ class Hooks {
 				$sums = self::summarizeWorkPackages( $version['work_packages'] );
 				$list .= ' - <span style="text-transform:none">' . $sums['hours']['nochildren'] . 'h verbleibend</span>';
 				$list .= '</th><th class="semorg-showedit"></th></tr>';
-				$list .= self::WorkPackageList( $version['work_packages'], $options );
+				$list .= self::WorkPackageList( $version['work_packages'], $options + [ 'version_id' => $version['version']->id, 'version_name' => $version['version']->name ] );
+				// add a task for a project that has no tasks in this version yet
+				$list .= '<tr><td colspan="2" class="border-right">' . self::addTaskButton( null, $version['version']->id, $version['version']->name ) . '</td><td class="semorg-showedit"></td></tr>';
 			}
 		}
 		$list = '<div class="semorg-list"><div class="semorg-list-table"><table class="table table-bordered table-sm">' . $list . '</table></div></div>';
@@ -773,7 +756,8 @@ class Hooks {
 						}
 					}
 
-					$list .= '<td style="font-size:small" class="border-right"><ul class="op-wp-list">' . $work_package_list . '</ul></td><td class="semorg-showedit"></td></tr>';
+					$add_button = isset( $options['version_id'] ) ? self::addTaskButton( $id, $options['version_id'], $options['version_name'] ?? '', true ) : '';
+					$list .= '<td style="font-size:small" class="border-right"><ul class="op-wp-list">' . $work_package_list . $add_button . '</ul></td><td class="semorg-showedit"></td></tr>';
 				}
 			}
 		} else {
@@ -807,7 +791,7 @@ class Hooks {
 	 *
 	 * @return Array Sums
 	 */
-	static function summarizeWorkPackages( $work_packages,  ) {
+	static function summarizeWorkPackages( $work_packages ) {
 		$hours = [
 			'open' => [
 				'remaining' => 0,
@@ -869,12 +853,12 @@ class Hooks {
 			$package->href = $GLOBALS['wgOpenProjectURL'] . '/work_packages/' . $package->id;
 
 			// TODO: make statuses considered "closed" configurable
-			$package->closed = $package->status_id === '10';
+			$package->closed = $package->status_id === (string)( $GLOBALS['wgOpenProjectClosedStatusID'] ?? 10 );
 
 			$package->hours = [
-				'estimated' => is_null( $package->estimatedTime ) ? 0 : ((new \DateInterval($package->estimatedTime))->format('%h') + (new \DateInterval($package->estimatedTime))->format('%i')/60),
-				'derivedEstimated' => is_null( $package->derivedEstimatedTime ) ? 0 : ((new \DateInterval($package->derivedEstimatedTime))->format('%h') + (new \DateInterval($package->derivedEstimatedTime))->format('%i')/60),
-				'remaining' => is_null( $package->remainingTime ) ? 0 : ((new \DateInterval($package->remainingTime))->format('%h') + (new \DateInterval($package->remainingTime))->format('%i')/60)
+				'estimated' => is_null( $package->estimatedTime ?? null ) ? 0 : ((new \DateInterval($package->estimatedTime))->format('%h') + (new \DateInterval($package->estimatedTime))->format('%i')/60),
+				'derivedEstimated' => is_null( $package->derivedEstimatedTime ?? null ) ? 0 : ((new \DateInterval($package->derivedEstimatedTime))->format('%h') + (new \DateInterval($package->derivedEstimatedTime))->format('%i')/60),
+				'remaining' => is_null( $package->remainingTime ?? null ) ? 0 : ((new \DateInterval($package->remainingTime))->format('%h') + (new \DateInterval($package->remainingTime))->format('%i')/60)
 			];
 		}
 		return $work_packages;
@@ -913,9 +897,9 @@ class Hooks {
 					'work_packages' => []
 				];
 			}
-			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['estimated'] += is_null( $package->estimatedTime ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h');
-			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['derivedEstimated'] += is_null( $package->derivedEstimatedTime ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h');
-			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['remaining'] += is_null( $package->remainingTime ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h');
+			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['estimated'] += is_null( $package->estimatedTime ?? null ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h');
+			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['derivedEstimated'] += is_null( $package->derivedEstimatedTime ?? null ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h');
+			$cluster[$package->project_id]['hours'][$package->closed ? 'closed' :'open']['remaining'] += is_null( $package->remainingTime ?? null ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h');
 			$cluster[$package->project_id]['storyPoints'] += $package->storyPoints ?? 0;
 			$cluster[$package->project_id]['work_packages'][] = $package;
 		}
@@ -953,15 +937,32 @@ class Hooks {
 					'work_packages' => []
 				];
 			}
-			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['estimated'] += is_null( $package->estimatedTime ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h');
-			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['derivedEstimated'] += is_null( $package->derivedEstimatedTime ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h');
-			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['remaining'] += is_null( $package->remainingTime ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h');
+			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['estimated'] += is_null( $package->estimatedTime ?? null ) ? 0 : (new \DateInterval($package->estimatedTime))->format('%h');
+			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['derivedEstimated'] += is_null( $package->derivedEstimatedTime ?? null ) ? 0 : (new \DateInterval($package->derivedEstimatedTime))->format('%h');
+			$cluster[$assignee]['hours'][$package->closed ? 'closed' :'open']['remaining'] += is_null( $package->remainingTime ?? null ) ? 0 : (new \DateInterval($package->remainingTime))->format('%h');
 			$cluster[$assignee]['storyPoints'] += $package->storyPoints ?? 0;
 			$cluster[$assignee]['work_packages'][] = $package;
 		}
 		return $cluster;
 	}
 
+
+	/*
+	 * Create the "+" button opening the create task form
+	 *
+	 * @param int|null $project_id Project of the new task (null: user picks the project)
+	 * @param int $version_id Preselected target version
+	 *
+	 * @return string HTML code for the button
+	 */
+	static function addTaskButton( $project_id, $version_id, $version_name = '', $asListItem = false ) {
+		$title = htmlspecialchars( wfMessage( 'openproject-add-task' )->text() );
+		$tag = $asListItem ? 'li' : 'a';
+		return '<' . $tag . ' class="op-wp-add' . ( $asListItem ? ' op-wp-add-item' : '' ) . '" title="' . $title . '" data-version="' . (int)$version_id . '"'
+			. ( $version_name !== '' ? ' data-version-name="' . htmlspecialchars( $version_name ) . '"' : '' )
+			. ( $project_id ? ' data-project="' . (int)$project_id . '"' : '' )
+			. '>' . ( $asListItem ? '' : '<i class="fa fa-plus"></i>' ) . '</' . $tag . '>';
+	}
 
 	/*
 	 * Create a html list for work package list item
