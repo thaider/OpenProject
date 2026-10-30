@@ -505,6 +505,10 @@ class Hooks {
 		$versions = self::getCurrentVersions( $parser, $date, $project, $options );
 		$list = '';
 		if( is_array( $versions ) ) {
+			// tasks can only be moved to a next sprint that is shown as well
+			$options['shown_versions'] = array_map( function( $version ) {
+				return $version['version']->name;
+			}, $versions );
 			foreach( $versions as $version ) {
 				$start_date = !is_null( $version['version']->startDate ) ? new \DateTime( $version['version']->startDate ) : null;
 				$end_date = !is_null( $version['version']->endDate ) ? new \DateTime( $version['version']->endDate ) : null;
@@ -514,10 +518,10 @@ class Hooks {
 					$interval = is_null( $end_date ) ? ( '(from ' . $start_date->format('j.n.') . ')' ) : ( '(' . $start_date->format('j.n.') . '-' . $end_date->format('j.n.') . ')' );
 				}
 				$href = $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version['version']->id;
-				$list .= '<tr><th colspan="2" class="border-right"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small>';
+				$list .= '<tr><th colspan="2" class="border-right" data-version="' . (int)$version['version']->id . '"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small>';
 				$version['work_packages'] = self::enrichWorkPackages( $version['work_packages'] );
 				$sums = self::summarizeWorkPackages( $version['work_packages'] );
-				$list .= ' - <span style="text-transform:none">' . $sums['hours']['nochildren'] . 'h verbleibend</span>';
+				$list .= ' - <span style="text-transform:none"><span class="op-version-hours">' . $sums['hours']['nochildren'] . '</span>h verbleibend</span>';
 				$list .= '</th><th class="semorg-showedit"></th></tr>';
 				$list .= self::WorkPackageList( $version['work_packages'], $options + [ 'version_id' => $version['version']->id, 'version_name' => $version['version']->name ] );
 				// add a task for a project that has no tasks in this version yet
@@ -997,9 +1001,16 @@ class Hooks {
 	 */	
 		if( isset( $options['closable'] ) && !$package->closed ) {
 			$link .= ' <i class="fa fa-check op-wp-close" data-toggle="tooltip" data-id="' . $package->id . '" data-lock="' . $package->lockVersion . '" title="' . wfMessage('openproject-close-workpackage')->text() . '"></i>';
+
+			// only numbered sprints ("Sprint 12") have a next sprint
+			$sprint = $options['version_name'] ?? $package->_links->version->title ?? $package->_links->targetVersions[0]->title ?? '';
+			$next_sprint = ApiOpenProjectMove::nextSprintName( $sprint );
+			if( $next_sprint !== null && ( !isset( $options['shown_versions'] ) || in_array( $next_sprint, $options['shown_versions'], true ) ) ) {
+				$link .= ' <i class="fa fa-arrow-right op-wp-move" data-toggle="tooltip" data-id="' . $package->id . '" title="' . wfMessage('openproject-move-workpackage')->text() . '"></i>';
+			}
 		}
 
-		$link = '<li class="op-wp-listitem op-wp-status-' . $package->status_id . ( $package->closed ? ' op-wp-closed' : '' ) . '">' . $link . '</li>';
+		$link = '<li data-id="' . (int)$package->id . '" class="op-wp-listitem op-wp-status-' . $package->status_id . ( $package->closed ? ' op-wp-closed' : '' ) . '">' . $link . '</li>';
 		return $link;
 	}
 
