@@ -1,5 +1,5 @@
 $( function() {
-	$( '.op-wp-close' ).click( function(e) {
+	$( document ).on( 'click', '.op-wp-close', function(e) {
 		var $icon = $(this);
 		$icon.toggleClass('fa-check fa-spin fa-spinner');
 
@@ -11,6 +11,71 @@ $( function() {
 			$icon.remove();
 		} ).fail( function( code, result ) {
 			$icon.toggleClass('fa-check fa-spin fa-spinner');
+			mw.notify( ( new mw.Api() ).getErrorMessage( result ), { type: 'error' } );
+		} );
+	});
+
+	/**
+	 * Change the remaining hours shown in a sprint header
+	 */
+	function addVersionHours( version, hours ) {
+		var $hours = $( 'th[data-version="' + version + '"] .op-version-hours' );
+		if ( $hours.length ) {
+			$hours.text( Math.round( ( parseFloat( $hours.text() ) + hours ) * 100 ) / 100 );
+		}
+	}
+
+	/**
+	 * Put the moved item into the list of its new sprint, where a reload would show it:
+	 * open items first (newest first), closed ones after them.
+	 */
+	function insertMovedItem( data ) {
+		var $item = $( data.html );
+		var $add = $( 'li.op-wp-add-item[data-version="' + data.version + '"][data-project="' + data.project + '"]' );
+
+		if ( $add.length ) {
+			var $list = $add.parent();
+			var $before = $list.children( 'li.op-wp-listitem' ).filter( function() {
+				var $li = $( this );
+				return $li.hasClass( 'op-wp-closed' ) || $li.data( 'id' ) < data.id;
+			} ).first();
+			if ( $before.length ) {
+				$item.insertBefore( $before );
+			} else {
+				$item.insertBefore( $add );
+			}
+			return;
+		}
+
+		// the project has no tasks in the sprint yet: add a row above the sprint's "+" row
+		var $row = $( 'a.op-wp-add[data-version="' + data.version + '"]' ).not( '[data-project]' ).closest( 'tr' );
+		if ( $row.length ) {
+			var $newAdd = $( '<li>' ).addClass( 'op-wp-add op-wp-add-item' )
+				.attr( { title: mw.msg( 'openproject-add-task' ), 'data-version': data.version, 'data-project': data.project } );
+			var $project = $( '<tr>' ).append(
+				$( '<td>' ).css( 'font-size', 'small' ).append( $( '<a>' ).attr( 'href', data.projectHref ).text( data.projectTitle ) ),
+				$( '<td>' ).addClass( 'border-right' ).css( 'font-size', 'small' ).append( $( '<ul>' ).addClass( 'op-wp-list' ).append( $item, $newAdd ) ),
+				$( '<td>' ).addClass( 'semorg-showedit' )
+			);
+			$row.before( $project );
+		}
+	}
+
+	$( document ).on( 'click', '.op-wp-move', function(e) {
+		var $icon = $(this);
+		$icon.toggleClass('fa-arrow-right fa-spin fa-spinner');
+
+		new mw.Api().postWithToken( 'csrf', {
+			action: 'openproject-move',
+			id: $icon.data('id')
+		} ).done( function( response ) {
+			var data = response[ 'openproject-move' ];
+			$icon.parent().remove();
+			addVersionHours( data.from, -data.hours );
+			addVersionHours( data.version, data.hours );
+			insertMovedItem( data );
+		} ).fail( function( code, result ) {
+			$icon.toggleClass('fa-arrow-right fa-spin fa-spinner');
 			mw.notify( ( new mw.Api() ).getErrorMessage( result ), { type: 'error' } );
 		} );
 	});
@@ -46,7 +111,7 @@ $( function() {
 		this.description = new OO.ui.MultilineTextInputWidget( { rows: 4, autosize: true } );
 		this.projectSelect = new OO.ui.DropdownInputWidget( { $overlay: this.$overlay } );
 		this.assignee = new OO.ui.DropdownInputWidget( { $overlay: this.$overlay } );
-		this.storyPoints = new OO.ui.NumberInputWidget( { min: 0, step: 1, value: 1 } );
+		this.estimatedTime = new OO.ui.NumberInputWidget( { min: 0, step: 0.5, value: 1 } );
 		this.versionSelect = new OO.ui.DropdownInputWidget( { $overlay: this.$overlay } );
 
 		var fields = [];
@@ -60,7 +125,7 @@ $( function() {
 		field( this.subject, 'openproject-create-subject' );
 		field( this.description, 'openproject-create-description' );
 		field( this.assignee, 'openproject-create-assignee' );
-		field( this.storyPoints, 'openproject-create-storypoints' );
+		field( this.estimatedTime, 'openproject-create-estimatedtime' );
 		field( this.versionSelect, 'openproject-create-version' );
 
 		this.projectSelect.on( 'change', this.loadProject.bind( this ) );
@@ -75,7 +140,10 @@ $( function() {
 	 * Saving needs a project
 	 */
 	CreateTaskDialog.prototype.updateSaveAbility = function() {
-		this.actions.setAbilities( { save: !!( this.project || this.projectSelect.getValue() ) } );
+		var hasProject = !!( this.project || this.projectSelect.getValue() );
+		this.actions.setAbilities( { save: hasProject } );
+		// the version list stays empty without a project, so it is not usable either
+		this.versionSelect.setDisabled( !hasProject );
 	};
 
 	CreateTaskDialog.prototype.getBodyHeight = function() {
@@ -140,7 +208,7 @@ $( function() {
 			}
 			dialog.versionSelect.setOptions( [ { data: '', label: '-' } ].concat( versions ) );
 			dialog.versionSelect.setValue( hasVersion ? String( dialog.version ) : '' );
-			dialog.storyPoints.setValue( meta.defaultStoryPoints );
+			dialog.estimatedTime.setValue( meta.defaultEstimatedHours );
 		} );
 	};
 
@@ -163,7 +231,7 @@ $( function() {
 				subject: subject,
 				description: dialog.description.getValue(),
 				assignee: dialog.assignee.getValue(),
-				storypoints: dialog.storyPoints.getValue(),
+				estimatedtime: dialog.estimatedTime.getValue(),
 				version: dialog.versionSelect.getValue()
 			} ).then( function( result ) {
 				// reload so the new task shows up in the list
@@ -187,7 +255,7 @@ $( function() {
 	// one window manager for all "+" buttons
 	var windowManager;
 
-	$( '.op-wp-add' ).click( function() {
+	$( document ).on( 'click', '.op-wp-add', function() {
 		var $button = $( this );
 		if ( !windowManager ) {
 			windowManager = new OO.ui.WindowManager();
