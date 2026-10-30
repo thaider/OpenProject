@@ -4,9 +4,11 @@
 .op-wp-closed {
 	text-decoration: line-through black;
 }
-.op-wp-close:hover {
+.op-wp-close:hover,
+.op-wp-move:hover {
 	cursor:pointer;
 }
-.op-wp-close {
+.op-wp-close,
+.op-wp-move {
 	color:var(--primary);
 }

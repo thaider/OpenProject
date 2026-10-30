@@ -7,5 +7,6 @@
 	"openproject-remaining": "remaining",
 	"openproject-completed": "completed",
 	"openproject-overview-storypoints": "$1 Story Points total",
-	"openproject-close-workpackage": "Close work package"
+	"openproject-close-workpackage": "Close work package",
+	"openproject-move-workpackage": "Move work package to next sprint"
 }

@@ -1,6 +1,6 @@
 {
 	"name": "OpenProject",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"author": [
 		"Tobias Haider"
 	],
@@ -9,7 +9,9 @@
 	"license-name": "GPL",
 	"type": "other",
 	"AutoloadClasses": {
-		"MediaWiki\\Extension\\OpenProject\\Hooks": "src/Hooks.php"
+		"MediaWiki\\Extension\\OpenProject\\OpenProjectHooks": "src/Hooks.php",
+		"MediaWiki\\Extension\\OpenProject\\ApiClose": "src/ApiClose.php",
+		"MediaWiki\\Extension\\OpenProject\\ApiMove": "src/ApiMove.php"
 	},
 	"config": {
 		"OpenProjectURL": false,
@@ -20,16 +22,16 @@
 	},
 	"Hooks": {
 		"GetPreferences": [
-			"MediaWiki\\Extension\\OpenProject\\Hooks::onGetPreferences"
+			"MediaWiki\\Extension\\OpenProject\\OpenProjectHooks::onGetPreferences"
 		],
 		"ParserFirstCallInit": [
-			"MediaWiki\\Extension\\OpenProject\\Hooks::onParserFirstCallInit"
+			"MediaWiki\\Extension\\OpenProject\\OpenProjectHooks::onParserFirstCallInit"
 		],
 		"BeforePageDisplay": [
-			"MediaWiki\\Extension\\OpenProject\\Hooks::onBeforePageDisplay"
+			"MediaWiki\\Extension\\OpenProject\\OpenProjectHooks::onBeforePageDisplay"
 		],
 		"ResourceLoaderGetConfigVars": [
-			"MediaWiki\\Extension\\OpenProject\\Hooks::onResourceLoaderGetConfigVars"
+			"MediaWiki\\Extension\\OpenProject\\OpenProjectHooks::onResourceLoaderGetConfigVars"
 		]
 	},
 	"MessagesDirs": {
@@ -46,12 +48,17 @@
 				"modules/ext.openproject.css"
 			],
 			"messages": [
-			]
+			],
+			"dependencies": [ "mediawiki.api" ]
 		}
 	},
 	"ResourceFileModulePaths": {
 		"localBasePath": "",
 		"remoteExtPath": "OpenProject"
+	},
+	"APIModules": {
+		"opclose": "MediaWiki\\Extension\\OpenProject\\ApiClose",
+		"opmove": "MediaWiki\\Extension\\OpenProject\\ApiMove"
 	},
 	"manifest_version": 1
 }

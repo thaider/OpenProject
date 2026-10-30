@@ -10,16 +10,16 @@ use MediaWiki\MediaWikiServices;
  * @file
  * @ingroup Extensions
  */
-class Hooks {
+class OpenProjectHooks {
 	protected static $call_api_cache = [];
 
 	static function onGetPreferences( $user, &$preferences ) {
 		$preferences['openproject-apikey'] = array(
-			'type' => 'text',
-			'label-message' => 'openproject-apikey',
-			'section' => 'personal/openproject',
-			'help-message' => 'openproject-apikey-help'
-		);
+				'type' => 'text',
+				'label-message' => 'openproject-apikey',
+				'section' => 'personal/openproject',
+				'help-message' => 'openproject-apikey-help'
+				);
 		return true;
 	}
 
@@ -90,7 +90,7 @@ class Hooks {
 		$work_packages = self::getWorkPackages( $parser, $options );
 
 		$options['story_points'] = true;
-		$list = self::WorkPackageList( $work_packages, $options );
+		$list = self::WorkPackageList( $parser, $work_packages, $options );
 
 		return array( $list, 'noparse' => true, 'isHTML' => true );
 	}
@@ -143,6 +143,39 @@ class Hooks {
 		$return = array( $code, $response );
 
 		apcu_store( $cache_key, $return, 60*1);
+		return $return;
+	}
+
+
+	/*
+	 * Send call to RESTful API
+	 *
+	 * @param User $user
+	 * @param string $url
+	 * @param array $put
+	 *
+	 * @return array code, response
+	 *
+	 * TODO: check for availability of cURL
+	 */
+	static function CallAPIPUT( $user, $url, $put = [] ) {
+		$curl = curl_init();
+		$url = $GLOBALS['wgOpenProjectURL'] . '/api/v3/' . $url;
+
+		$uom = MediaWikiServices::getInstance()->getUserOptionsManager();
+		$userpwd = 'apikey:' . $uom->getOption($user, 'openproject-apikey');
+
+		curl_setopt( $curl, CURLOPT_HTTPHEADER, array('Content-Type:application/json'));
+		curl_setopt( $curl, CURLOPT_URL, $url );
+		curl_setopt( $curl, CURLOPT_CUSTOMREQUEST, "PATCH");
+		curl_setopt( $curl, CURLOPT_POSTFIELDS, $put);
+		curl_setopt( $curl, CURLOPT_USERPWD, $userpwd);
+		curl_setopt( $curl, CURLOPT_RETURNTRANSFER, true );
+		$response = json_decode( curl_exec( $curl ), true );
+		$code = curl_getinfo( $curl, CURLINFO_HTTP_CODE );
+		curl_close( $curl );
+
+		$return = array( $code, $response );
 		return $return;
 	}
 
@@ -242,7 +275,7 @@ class Hooks {
 		$href = $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version;
 		$heading = '<p><b>Work Packages</b> (' . $response->count . ' from ' . $response->total . ' are shown – <a href="' . $href . '">see all on openproject</a>)</p>';
 		$list = '<div class="op-version">' . $heading;
-		$list .= self::WorkPackageList( $work_packages, $params );
+		$list .= self::WorkPackageList( $parser, $work_packages, $params );
 		$list .= '</div>';
 
 		return array( $list, 'noparse' => true, 'isHTML' => true );
@@ -266,7 +299,7 @@ class Hooks {
 			[
 				'version' => [
 					'operator' => '=',
-					'values' => [ $options['version'] ]
+			'values' => [ $options['version'] ]
 				]
 			]
 		];
@@ -274,7 +307,7 @@ class Hooks {
 			$filters[] = [
 				'status' => [
 					'operator' => '!',
-					'values' => [ '10' ]
+				'values' => [ '10' ]
 				]
 			];
 		}
@@ -283,14 +316,14 @@ class Hooks {
 				$filters[] = [
 					'assignee' => [
 						'operator' => '=',
-						'values' => explode( ',', $options['assignee'] )
+					'values' => explode( ',', $options['assignee'] )
 					]
 				];
 			} else {
 				$filters[] = [
 					'assignee' => [
 						'operator' => '*',
-						'values' => []
+					'values' => []
 					]
 				];
 			}
@@ -299,7 +332,7 @@ class Hooks {
 			$filters[] = [
 				'type_id' => [
 					'operator' => '=',
-					'values' => explode( ',', $options['type_id'] )
+				'values' => explode( ',', $options['type_id'] )
 				]
 			];
 		}
@@ -368,17 +401,17 @@ class Hooks {
 		}
 		$versions = self::getVersions( $parser, $params, $project );
 		usort( $versions, function($a, $b) {
-			return $a->startDate <=> $b->startDate;
-		});
+				return $a->startDate <=> $b->startDate;
+				});
 		$work_packages = [];
 		foreach( $versions as $version ) {
 			if( 
-				!is_null( $version->startDate ) &&
-				$version->status == 'open' &&
-				strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
-				strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
-				( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
-			) {
+					!is_null( $version->startDate ) &&
+					$version->status == 'open' &&
+					strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
+					strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
+					( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
+			  ) {
 				$project_href = $version->_links->definingProject->href;
 				$project = substr( $project_href, strrpos($project_href, '/')+1);
 				$work_packages[] = [
@@ -403,16 +436,16 @@ class Hooks {
 		$future = 7;
 		$versions = self::getVersions( $parser, $params, $project );
 		usort( $versions, function($a, $b) {
-			return $a->startDate <=> $b->startDate;
-		});
+				return $a->startDate <=> $b->startDate;
+				});
 		foreach( $versions as $version ) {
 			if( 
-				!is_null( $version->startDate ) &&
-				$version->status == 'open' &&
-				strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
-				strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
-				( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
-			) {
+					!is_null( $version->startDate ) &&
+					$version->status == 'open' &&
+					strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
+					strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
+					( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
+			  ) {
 				return $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version->id . '/';
 			}
 		}
@@ -433,16 +466,16 @@ class Hooks {
 		$future = 7;
 		$versions = self::getVersions( $parser, $params, $project );
 		usort( $versions, function($a, $b) {
-			return $a->startDate <=> $b->startDate;
-		});
+				return $a->startDate <=> $b->startDate;
+				});
 		foreach( $versions as $version ) {
 			if( 
-				!is_null( $version->startDate ) &&
-				$version->status == 'open' &&
-				strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
-				strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
-				( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
-			) {
+					!is_null( $version->startDate ) &&
+					$version->status == 'open' &&
+					strtotime( $version->startDate ) < $date + $future * 60 * 60 * 24 && 
+					strtotime( $version->endDate ) + 60 * 60 * 24 > $date &&
+					( !isset( $params['name'] ) || preg_match( '/' . $params['name'] . '/', $version->name ) )
+			  ) {
 				$project_href = $version->_links->definingProject->href;
 				$project = substr( $project_href, strrpos($project_href, '/')+1);
 				$work_packages = self::getWorkPackages( $parser, array_merge( $params, [ 'project' => $project, 'version' => $version->id ] ) );
@@ -529,28 +562,28 @@ class Hooks {
 				$end_date = !is_null( $version['version']->endDate ) ? new \DateTime( $version['version']->endDate ) : null;
 				if( is_null( $start_date ) ) {
 					$interval = is_null( $end_date ) ? '' : '(until ' . $end_date->format('j.n.') . ')';
-				} else {
-					$interval = is_null( $end_date ) ? ( '(from ' . $start_date->format('j.n.') . ')' ) : ( '(' . $start_date->format('j.n.') . '-' . $end_date->format('j.n.') . ')' );
-				}
-				$href = $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version['version']->id;
-				$list .= '<tr><th colspan="2" class="border-right"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small>';
-				$version['work_packages'] = self::enrichWorkPackages( $version['work_packages'] );
-				$sums = self::summarizeWorkPackages( $version['work_packages'] );
-				$list .= ' - <span style="text-transform:none">' . $sums['hours']['nochildren'] . 'h verbleibend</span>';
-				$list .= '</th><th class="semorg-showedit"></th></tr>';
-				$list .= self::WorkPackageList( $version['work_packages'], $options );
-			}
-		}
-		$list = '<div class="semorg-list"><div class="semorg-list-table"><table class="table table-bordered table-sm">' . $list . '</table></div></div>';
-		return $list;
-	}
+							} else {
+							$interval = is_null( $end_date ) ? ( '(from ' . $start_date->format('j.n.') . ')' ) : ( '(' . $start_date->format('j.n.') . '-' . $end_date->format('j.n.') . ')' );
+									}
+									$href = $GLOBALS['wgOpenProjectURL'] . '/versions/' . $version['version']->id;
+									$list .= '<tr><th colspan="2" class="border-right"><a href="' . $href . '">' . $version['version']->name . '</a> <small>' . $interval . '</small>';
+									$version['work_packages'] = self::enrichWorkPackages( $version['work_packages'] );
+									$sums = self::summarizeWorkPackages( $version['work_packages'] );
+									$list .= ' - <span style="text-transform:none">' . $sums['hours']['nochildren'] . 'h verbleibend</span>';
+									$list .= '</th><th class="semorg-showedit"></th></tr>';
+									$list .= self::WorkPackageList( $parser, $version['work_packages'], $options );
+									}
+									}
+									$list = '<div class="semorg-list"><div class="semorg-list-table"><table class="table table-bordered table-sm">' . $list . '</table></div></div>';
+									return $list;
+									}
 
 
-	/*
-	 * Show all work packages for a specific project
-	 * 
-	 * @param string $project ID of the project
-	 */
+									/*
+									 * Show all work packages for a specific project
+									 * 
+									 * @param string $project ID of the project
+									 */
 	static function Project( \Parser $parser, $project = '' ) {
 		$parser->getOutput()->updateCacheExpiry(0);
 		if( $project == '' ) {
@@ -568,7 +601,7 @@ class Hooks {
 		$href = $GLOBALS['wgOpenProjectURL'] . '/projects/' . $project;
 		$heading = '<p><b>Work Packages</b> (' . $response->count . ' from ' . $response->total . ' are shown – <a href="' . $href . '">see all on openproject</a>)</p>';
 		$list = '<div class="op-version">' . $heading;
-		$list .= self::WorkPackageList( $work_packages, $params );
+		$list .= self::WorkPackageList( $parser, $work_packages, $params );
 		$list .= '</div>';
 
 		return array( $list, 'noparse' => true, 'isHTML' => true );
@@ -720,7 +753,7 @@ class Hooks {
 	 *
 	 * @return string HTML code for work package list
 	 */
-	static function WorkPackageList( $work_packages, $options ) {
+	static function WorkPackageList( $parser, $work_packages, $options ) {
 		$list = '';
 		$options['hide_assignee'] = true;
 
@@ -736,7 +769,7 @@ class Hooks {
 
 					$work_package_list = '';
 					foreach( $assignee['work_packages'] as $package ) {
-						$work_package_list .= self::WorkPackageListItem( $package, $options );
+						$work_package_list .= self::WorkPackageListItem( $parser, $package, $options );
 					}
 
 					$list .= '<ul class="op-wp-list mb-2">' . $work_package_list . '</ul>';
@@ -750,11 +783,11 @@ class Hooks {
 					$cluster_heading_template = \Title::newFromText( 'Template:op-cluster-heading' );
 					if( $cluster_heading_template->exists() ) {
 						$cluster_heading = $GLOBALS['wgParser']->recursiveTagParse( '{{op-cluster-heading
-							|href=' . $project['href'] . '
-							|title=' . $project['title'] . '
-							|story_points=' . $project['storyPoints'] . '
-							|id=' . $id . '
-					}}' );
+								|href=' . $project['href'] . '
+								|title=' . $project['title'] . '
+								|story_points=' . $project['storyPoints'] . '
+								|id=' . $id . '
+								}}' );
 					}
 					$list .= '<tr><td style="font-size:small">' . $cluster_heading . '</td>';
 
@@ -764,7 +797,7 @@ class Hooks {
 						if( isset( $package->_links->children ) ) {
 							continue;		
 						}
-						$link = self::WorkPackageListItem( $package, $options );
+						$link = self::WorkPackageListItem( $parser, $package, $options );
 
 						if( $package->closed ) {
 							$work_package_list .= $link;
@@ -778,7 +811,7 @@ class Hooks {
 			}
 		} else {
 			foreach( $work_packages as $package ) {
-				$link = self::WorkPackageListItem( $package, $options );
+				$link = self::WorkPackageListItem( $parser, $package, $options );
 
 				if( $package->closed ) {
 					$list .= $link;
@@ -811,42 +844,42 @@ class Hooks {
 		$hours = [
 			'open' => [
 				'remaining' => 0,
-				'estimated' => 0
+			'estimated' => 0
 			],
 			'closed' => [
 				'remaining' => 0,
-				'estimated' => 0
+			'estimated' => 0
 			],
 			'total' => [
 				'remaining' => 0,
-				'estimated' => 0
+			'estimated' => 0
 			],
 			'nochildren' => 0 // remaining hours plus story points (if a feature has no children defined)
 		];
 
-		$storyPoints = 0;
+			$storyPoints = 0;
 
-		foreach( $work_packages as &$package ) {
-			foreach( [ 'total', $package->closed ? 'closed' : 'open' ] as $status ) {
-				$hours[$status]['remaining'] += $package->hours['remaining'];
-				$hours[$status]['estimated'] += $package->hours['estimated'];
-			}
-
-			if( !isset( $package->_links->children ) && !$package->closed ) {
-				if( $package->hours['estimated'] > 0 ) {
-					$hours['nochildren'] += $package->hours['remaining'];
-				} else {
-					$hours['nochildren'] += $package->storyPoints ?? 0;
+			foreach( $work_packages as &$package ) {
+				foreach( [ 'total', $package->closed ? 'closed' : 'open' ] as $status ) {
+					$hours[$status]['remaining'] += $package->hours['remaining'];
+					$hours[$status]['estimated'] += $package->hours['estimated'];
 				}
+
+				if( !isset( $package->_links->children ) && !$package->closed ) {
+					if( $package->hours['estimated'] > 0 ) {
+						$hours['nochildren'] += $package->hours['remaining'];
+					} else {
+						$hours['nochildren'] += $package->storyPoints ?? 0;
+					}
+				}
+
+				$storyPoints += $package->storyPoints ?? 0;
 			}
 
-			$storyPoints += $package->storyPoints ?? 0;
-		}
-
-		return [
-			'hours' => $hours,
-			'storyPoints' => $storyPoints
-		];
+			return [
+				'hours' => $hours,
+				'storyPoints' => $storyPoints
+			];
 	}
 
 
@@ -900,13 +933,13 @@ class Hooks {
 					'hours' => [
 						'open' => [
 							'estimated' => 0,
-							'derivedEstimated' => 0,
-							'remaining' => 0
+					'derivedEstimated' => 0,
+					'remaining' => 0
 						],
 						'closed' => [
 							'estimated' => 0,
-							'derivedEstimated' => 0,
-							'remaining' => 0
+						'derivedEstimated' => 0,
+						'remaining' => 0
 						],
 					],
 					'storyPoints' => 0,
@@ -940,13 +973,13 @@ class Hooks {
 					'hours' => [
 						'open' => [
 							'estimated' => 0,
-							'derivedEstimated' => 0,
-							'remaining' => 0
+					'derivedEstimated' => 0,
+					'remaining' => 0
 						],
 						'closed' => [
 							'estimated' => 0,
-							'derivedEstimated' => 0,
-							'remaining' => 0
+						'derivedEstimated' => 0,
+						'remaining' => 0
 						],
 					],
 					'storyPoints' => 0,
@@ -971,14 +1004,14 @@ class Hooks {
 	 *
 	 * @return string HTML code for work package list item
 	 */
-	static function WorkPackageListItem( $package, $options ) {
+	static function WorkPackageListItem( $parser, $package, $options ) {
 		$link = '<a href="' . $package->href . '" target="_blank" class="op-wp-link">' . $package->subject . '</a>';
 
 		if( isset( $package->_links->assignee->title ) 
-			&& $package->_links->assignee->title != '' 
-			&& ( !isset( $options['assignee'] ) || $options['assignee'] != 'me' )
-			&& ( !isset( $options['hide_assignee'] ) || $options['hide_assignee'] == false )
-		) {
+				&& $package->_links->assignee->title != '' 
+				&& ( !isset( $options['assignee'] ) || $options['assignee'] != 'me' )
+				&& ( !isset( $options['hide_assignee'] ) || $options['hide_assignee'] == false )
+		  ) {
 			$link .= ' <span class="op-wp-project">(' . $package->_links->assignee->title . ')</span> ';
 		}
 
@@ -990,12 +1023,17 @@ class Hooks {
 			$link .= ' <small class="op-wp-hours">(' . $hours . ')</small> ';
 		}
 
-	/*	if( $package->description->raw != '' ) {
+		/*	if( $package->description->raw != '' ) {
 			$link .= '<div class="op-wp-desc">' . $package->description->raw . '</div>';
-		}
-	 */	
+			}
+		 */	
 		if( isset( $options['closable'] ) && !$package->closed ) {
 			$link .= ' <i class="fa fa-check op-wp-close" data-toggle="tooltip" data-id="' . $package->id . '" data-lock="' . $package->lockVersion . '" title="' . wfMessage('openproject-close-workpackage')->text() . '"></i>';
+
+			$current_sprint = (int) str_replace( 'Sprint ', '', $package->_links->targetVersions[0]->title );
+			if( $next_sprint_id = self::getVersionIDFromName($parser, 'Sprint ' . $current_sprint+1 ) ) {
+				$link .= ' <i class="fa fa-arrow-right op-wp-move" data-toggle="tooltip" data-id="' . $package->id . '" data-targetVersion="' . $next_sprint_id . '" data-lock="' . $package->lockVersion . '" title="' . wfMessage('openproject-move-workpackage')->text() . '"></i>';
+			}
 		}
 
 		$link = '<li class="op-wp-listitem op-wp-status-' . $package->status_id . ( $package->closed ? ' op-wp-closed' : '' ) . '">' . $link . '</li>';

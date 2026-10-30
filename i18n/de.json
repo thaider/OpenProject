@@ -7,5 +7,6 @@
 	"openproject-remaining": "verbleibend",
 	"openproject-completed": "abgeschlossen",
 	"openproject-overview-storypoints": "$1 Story Points insgesamt",
-	"openproject-close-workpackage": "Arbeitspaket schließen"
+	"openproject-close-workpackage": "Arbeitspaket schließen",
+	"openproject-move-workpackage": "in den nächsten Sprint verschieben"
 }
