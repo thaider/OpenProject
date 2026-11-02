@@ -44,7 +44,7 @@ class ApiOpenProjectMeta extends ApiOpenProjectBase {
 			];
 		}
 		$result['defaultType'] = (int)( $GLOBALS['wgOpenProjectDefaultTypeID'] ?? 0 );
-		$result['defaultStoryPoints'] = $GLOBALS['wgOpenProjectDefaultStoryPoints'] ?? 1;
+		$result['defaultEstimatedHours'] = $GLOBALS['wgOpenProjectDefaultEstimatedHours'] ?? 1;
 
 		$this->getResult()->addValue( null, $this->getModuleName(), $result );
 	}

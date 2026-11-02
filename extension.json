@@ -15,12 +15,14 @@
 		"MediaWiki\\Extension\\OpenProject\\Hooks": "src/Hooks.php",
 		"MediaWiki\\Extension\\OpenProject\\OpenProjectClient": "src/OpenProjectClient.php",
 		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose": "src/ApiOpenProjectClose.php",
+		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectMove": "src/ApiOpenProjectMove.php",
 		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectBase": "src/ApiOpenProjectBase.php",
 		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectCreate": "src/ApiOpenProjectCreate.php",
 		"MediaWiki\\Extension\\OpenProject\\ApiOpenProjectMeta": "src/ApiOpenProjectMeta.php"
 	},
 	"APIModules": {
 		"openproject-close": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectClose",
+		"openproject-move": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectMove",
 		"openproject-create": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectCreate",
 		"openproject-meta": "MediaWiki\\Extension\\OpenProject\\ApiOpenProjectMeta"
 	},
@@ -29,7 +31,7 @@
 		"OpenProjectProjectID": false,
 		"OpenProjectClosedStatusID": 10,
 		"OpenProjectDefaultTypeID": 0,
-		"OpenProjectDefaultStoryPoints": 1
+		"OpenProjectDefaultEstimatedHours": 1
 	},
 	"ExtensionMessagesFiles": {
 		"OpenProjectMagic": "OpenProject.i18n.magic.php"
@@ -67,12 +69,13 @@
 				"modules/ext.openproject.css"
 			],
 			"messages": [
+				"openproject-add-task",
 				"openproject-create-title",
 				"openproject-create-subject",
 				"openproject-create-subject-missing",
 				"openproject-create-description",
 				"openproject-create-assignee",
-				"openproject-create-storypoints",
+				"openproject-create-estimatedtime",
 				"openproject-create-version",
 				"openproject-create-project",
 				"openproject-create-project-select",

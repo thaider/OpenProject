@@ -20,7 +20,7 @@ class ApiOpenProjectCreate extends ApiOpenProjectBase {
 
 		$body = [
 			'subject' => $this->getParameter( 'subject' ),
-			'storyPoints' => $this->getParameter( 'storypoints' ),
+			'estimatedTime' => 'PT' . $this->getEstimatedHours() . 'H',
 			'_links' => [
 				// OpenProject resolves "me" from the API token
 				'assignee' => [ 'href' => '/api/v3/users/' . ( $assignee ?: 'me' ) ],
@@ -51,6 +51,17 @@ class ApiOpenProjectCreate extends ApiOpenProjectBase {
 			'id' => (int)$wp->id,
 			'href' => $GLOBALS['wgOpenProjectURL'] . '/work_packages/' . $wp->id,
 		] );
+	}
+
+	/**
+	 * Estimated hours as a number, accepting a decimal comma
+	 */
+	protected function getEstimatedHours() {
+		$hours = str_replace( ',', '.', trim( $this->getParameter( 'estimatedtime' ) ) );
+		if( !is_numeric( $hours ) || $hours < 0 ) {
+			$this->dieWithError( 'openproject-create-estimate-invalid', 'invalidestimate' );
+		}
+		return (float)$hours;
 	}
 
 	/**
@@ -95,9 +106,10 @@ class ApiOpenProjectCreate extends ApiOpenProjectBase {
 			'assignee' => [
 				ParamValidator::PARAM_TYPE => 'integer',
 			],
-			'storypoints' => [
-				ParamValidator::PARAM_TYPE => 'integer',
-				ParamValidator::PARAM_DEFAULT => $GLOBALS['wgOpenProjectDefaultStoryPoints'] ?? 1,
+			// the Action API has no float type
+			'estimatedtime' => [
+				ParamValidator::PARAM_TYPE => 'string',
+				ParamValidator::PARAM_DEFAULT => $GLOBALS['wgOpenProjectDefaultEstimatedHours'] ?? 1,
 			],
 			'version' => [
 				ParamValidator::PARAM_TYPE => 'integer',
