@@ -43,6 +43,15 @@ class ApiOpenProjectMeta extends ApiOpenProjectBase {
 				'meName' => $me->name,
 			];
 		}
+		$priorities = $this->getPriorities();
+		$result['priorities'] = array_map( function( $p ) {
+			return [ 'id' => $p['id'], 'name' => $p['name'] ];
+		}, $priorities );
+		foreach( $priorities as $p ) {
+			if( $p['level'] === 'normal' ) {
+				$result['defaultPriority'] = $p['id'];
+			}
+		}
 		$result['defaultType'] = (int)( $GLOBALS['wgOpenProjectDefaultTypeID'] ?? 0 );
 		$result['defaultEstimatedHours'] = $GLOBALS['wgOpenProjectDefaultEstimatedHours'] ?? 1;
 

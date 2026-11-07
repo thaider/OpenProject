@@ -52,6 +52,36 @@ abstract class ApiOpenProjectBase extends ApiBase {
 	}
 
 	/**
+	 * Priorities offered when creating a task
+	 */
+	const PRIORITY_LEVELS = [
+		'normal' => 'normal',
+		'hoch' => 'high',
+		'high' => 'high',
+		'dringend' => 'urgent',
+		'sofort' => 'urgent',
+		'urgent' => 'urgent',
+		'immediate' => 'urgent',
+	];
+
+	/**
+	 * Selectable priorities of OpenProject
+	 *
+	 * @return array[] List of [ 'id' => int, 'name' => string, 'level' => string ]
+	 */
+	protected function getPriorities() {
+		$priorities = $this->call( 'GET', 'priorities', [], null, true );
+		$list = [];
+		foreach( $priorities->_embedded->elements ?? [] as $priority ) {
+			$level = self::PRIORITY_LEVELS[mb_strtolower( $priority->name )] ?? null;
+			if( $level !== null ) {
+				$list[] = [ 'id' => (int)$priority->id, 'name' => $priority->name, 'level' => $level ];
+			}
+		}
+		return $list;
+	}
+
+	/**
 	 * Reduce a collection of OpenProject resources to id/name pairs
 	 */
 	protected static function idNameList( $collection, $name = 'name' ) {

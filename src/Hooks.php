@@ -979,6 +979,11 @@ class Hooks {
 	static function WorkPackageListItem( $package, $options ) {
 		$link = '<a href="' . $package->href . '" target="_blank" class="op-wp-link">' . $package->subject . '</a>';
 
+		$level = ApiOpenProjectBase::PRIORITY_LEVELS[mb_strtolower( $package->_links->priority->title ?? '' )] ?? null;
+		if( $level === 'high' || $level === 'urgent' ) {
+			$link .= ' <strong class="op-wp-priority op-wp-priority-' . $level . '" title="' . htmlspecialchars( $package->_links->priority->title ) . '">' . ( $level === 'urgent' ? '!!' : '!' ) . '</strong>';
+		}
+
 		if( isset( $package->_links->assignee->title ) 
 			&& $package->_links->assignee->title != '' 
 			&& ( !isset( $options['assignee'] ) || $options['assignee'] != 'me' )
