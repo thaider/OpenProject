@@ -76,6 +76,7 @@
 				"openproject-create-description",
 				"openproject-create-assignee",
 				"openproject-create-estimatedtime",
+				"openproject-create-priority",
 				"openproject-create-version",
 				"openproject-create-project",
 				"openproject-create-project-select",

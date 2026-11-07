@@ -42,3 +42,11 @@ li.op-wp-add-item:before {
 	left:-0.7em;
 	transform:translateX(-50%);
 }
+
+.op-wp-priority {
+	color:#d9822b;
+	cursor:default;
+}
+.op-wp-priority-urgent {
+	color:#d33;
+}
