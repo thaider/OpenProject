@@ -35,6 +35,10 @@ class ApiOpenProjectCreate extends ApiOpenProjectBase {
 			$body['_links']['version'] = [ 'href' => $href ];
 			$body['_links']['targetVersions'] = [ [ 'href' => $href ] ];
 		}
+		$priority = $this->getPriority();
+		if( $priority ) {
+			$body['_links']['priority'] = [ 'href' => '/api/v3/priorities/' . $priority ];
+		}
 		if( $type ) {
 			$body['_links']['type'] = [ 'href' => '/api/v3/types/' . $type ];
 		}
@@ -62,6 +66,24 @@ class ApiOpenProjectCreate extends ApiOpenProjectBase {
 			$this->dieWithError( 'openproject-create-estimate-invalid', 'invalidestimate' );
 		}
 		return (float)$hours;
+	}
+
+	/**
+	 * Chosen priority, "Normal" if none is given. Only Normal, Hoch and Dringend are allowed.
+	 */
+	protected function getPriority() {
+		$allowed = $this->getPriorities();
+		$wanted = $this->getParameter( 'priority' );
+		foreach( $allowed as $priority ) {
+			if( $wanted ? $priority['id'] === $wanted : $priority['level'] === 'normal' ) {
+				return $priority['id'];
+			}
+		}
+		if( $wanted ) {
+			$this->dieWithError( 'openproject-create-priority-invalid', 'invalidpriority' );
+		}
+		// no "Normal" priority found, leave OpenProject default
+		return 0;
 	}
 
 	/**
@@ -115,6 +137,9 @@ class ApiOpenProjectCreate extends ApiOpenProjectBase {
 				ParamValidator::PARAM_TYPE => 'integer',
 			],
 			'type' => [
+				ParamValidator::PARAM_TYPE => 'integer',
+			],
+			'priority' => [
 				ParamValidator::PARAM_TYPE => 'integer',
 			],
 		];

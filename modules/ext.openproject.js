@@ -113,6 +113,7 @@ $( function() {
 		this.assignee = new OO.ui.DropdownInputWidget( { $overlay: this.$overlay } );
 		this.estimatedTime = new OO.ui.NumberInputWidget( { min: 0, step: 0.5, value: 1 } );
 		this.versionSelect = new OO.ui.DropdownInputWidget( { $overlay: this.$overlay } );
+		this.priority = new OO.ui.DropdownInputWidget( { $overlay: this.$overlay } );
 
 		var fields = [];
 		function field( widget, msg ) {
@@ -126,6 +127,7 @@ $( function() {
 		field( this.description, 'openproject-create-description' );
 		field( this.assignee, 'openproject-create-assignee' );
 		field( this.estimatedTime, 'openproject-create-estimatedtime' );
+		field( this.priority, 'openproject-create-priority' );
 		field( this.versionSelect, 'openproject-create-version' );
 
 		this.projectSelect.on( 'change', this.loadProject.bind( this ) );
@@ -209,6 +211,10 @@ $( function() {
 			dialog.versionSelect.setOptions( [ { data: '', label: '-' } ].concat( versions ) );
 			dialog.versionSelect.setValue( hasVersion ? String( dialog.version ) : '' );
 			dialog.estimatedTime.setValue( meta.defaultEstimatedHours );
+			dialog.priority.setOptions( options( meta.priorities || [] ) );
+			if ( meta.defaultPriority ) {
+				dialog.priority.setValue( String( meta.defaultPriority ) );
+			}
 		} );
 	};
 
@@ -232,7 +238,8 @@ $( function() {
 				description: dialog.description.getValue(),
 				assignee: dialog.assignee.getValue(),
 				estimatedtime: dialog.estimatedTime.getValue(),
-				version: dialog.versionSelect.getValue()
+				version: dialog.versionSelect.getValue(),
+				priority: dialog.priority.getValue()
 			} ).then( function( result ) {
 				// reload so the new task shows up in the list
 				dialog.close( { reload: true } );
