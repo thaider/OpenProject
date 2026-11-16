@@ -199,7 +199,7 @@ $( function() {
 			if ( !assignees.some( function( a ) { return a.data === String( meta.me ); } ) ) {
 				assignees.unshift( { data: String( meta.me ), label: meta.meName } );
 			}
-			dialog.assignee.setOptions( assignees );
+			dialog.assignee.setOptions( [ { data: '0', label: '-' } ].concat( assignees ) );
 			dialog.assignee.setValue( String( meta.me ) );
 			var versions = options( meta.versions );
 			var hasVersion = versions.some( function( v ) { return v.data === String( dialog.version ); } );
@@ -208,8 +208,8 @@ $( function() {
 				versions.unshift( { data: String( dialog.version ), label: dialog.versionName || '#' + dialog.version } );
 				hasVersion = true;
 			}
-			dialog.versionSelect.setOptions( [ { data: '', label: '-' } ].concat( versions ) );
-			dialog.versionSelect.setValue( hasVersion ? String( dialog.version ) : '' );
+			dialog.versionSelect.setOptions( versions );
+			dialog.versionSelect.setValue( hasVersion ? String( dialog.version ) : ( versions.length ? versions[ 0 ].data : '' ) );
 			dialog.estimatedTime.setValue( meta.defaultEstimatedHours );
 			dialog.priority.setOptions( options( meta.priorities || [] ) );
 			if ( meta.defaultPriority ) {
@@ -238,7 +238,7 @@ $( function() {
 				description: dialog.description.getValue(),
 				assignee: dialog.assignee.getValue(),
 				estimatedtime: dialog.estimatedTime.getValue(),
-				version: dialog.versionSelect.getValue(),
+				version: dialog.versionSelect.getValue() || 0,
 				priority: dialog.priority.getValue()
 			} ).then( function( result ) {
 				// reload so the new task shows up in the list
