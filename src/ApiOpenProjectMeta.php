@@ -9,6 +9,23 @@ use Wikimedia\ParamValidator\ParamValidator;
  */
 class ApiOpenProjectMeta extends ApiOpenProjectBase {
 
+	/* Limit the projects to $wgOpenProjectProjects if set (numeric IDs or identifiers) and sort them alphabetically*/
+	protected static function filterProjects( $collection ) {
+		$allowed = array_map( 'strtolower', array_map( 'strval', $GLOBALS['wgOpenProjectProjects'] ?? [] ) );
+		$projects = [];
+		foreach( $collection->_embedded->elements ?? [] as $element ) {
+			if( $allowed && !in_array( (string)$element->id, $allowed, true )
+				&& !in_array( strtolower( $element->identifier ?? '' ), $allowed, true ) ) {
+				continue;
+			}
+			$projects[] = [ 'id' => (int)$element->id, 'name' => $element->name ];
+		}
+		usort( $projects, function( $a, $b ) {
+			return strcasecmp( $a['name'], $b['name'] );
+		} );
+		return $projects;
+	}
+
 	public function execute() {
 		$this->checkUser();
 
@@ -17,7 +34,7 @@ class ApiOpenProjectMeta extends ApiOpenProjectBase {
 			$projects = $this->call( 'GET', 'projects', [ 'pageSize' => 1000 ], null, true );
 			$me = $this->call( 'GET', 'users/me', [], null, true );
 			$result = [
-				'projects' => self::idNameList( $projects ),
+				'projects' => self::filterProjects( $projects ),
 				'me' => (int)$me->id,
 				'meName' => $me->name,
 			];

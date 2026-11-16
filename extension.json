@@ -29,6 +29,7 @@
 	"config": {
 		"OpenProjectURL": false,
 		"OpenProjectProjectID": false,
+		"OpenProjectProjects": [],
 		"OpenProjectClosedStatusID": 10,
 		"OpenProjectDefaultTypeID": 0,
 		"OpenProjectDefaultEstimatedHours": 1

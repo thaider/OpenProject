@@ -22,8 +22,8 @@ class ApiOpenProjectCreate extends ApiOpenProjectBase {
 			'subject' => $this->getParameter( 'subject' ),
 			'estimatedTime' => 'PT' . $this->getEstimatedHours() . 'H',
 			'_links' => [
-				// OpenProject resolves "me" from the API token
-				'assignee' => [ 'href' => '/api/v3/users/' . ( $assignee ?: 'me' ) ],
+				// OpenProject resolves "me" from the API token; assignee can also be 0 (unassigned)
+				'assignee' => [ 'href' => $assignee === 0 ? null : '/api/v3/users/' . ( $assignee ?: 'me' ) ],
 			],
 		];
 		if( $description !== '' ) {
